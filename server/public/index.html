@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VeloLeads - Premium Automated AI Lead Scraper & Email Delivery Suite</title>
+  <meta name="description" content="Extract, filter, and email B2B leads from Google Maps automatically. Includes AI-powered qualification, automated email reports, and daily campaign scheduling. Get lifetime scale for ₹1/year.">
+  
+  <!-- Google Fonts: Outfit (headings) & Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Razorpay Checkout Script -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #030303;
+      --card-bg: rgba(20, 20, 25, 0.6);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(59, 130, 246, 0.4);
+      --text-main: #f4f4f5;
+      --text-sub: #a1a1aa;
+      --primary: #3b82f6;
+      --primary-hover: #1d4ed8;
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139, 92, 246, 0.15);
+      --success: #10b981;
+      --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+      --dark-gradient: linear-gradient(180deg, rgba(20, 20, 25, 0.8) 0%, rgba(10, 10, 12, 0.9) 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Background Blobs */
+    .ambient-blob {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -1;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    .blob-1 {
+      top: 5%;
+      right: -10%;
+      background: #3b82f6;
+    }
+
+    .blob-2 {
+      top: 45%;
+      left: -15%;
+      background: #8b5cf6;
+      width: 500px;
+      height: 500px;
+    }
+
+    .blob-3 {
+      bottom: 10%;
+      right: -5%;
+      background: #ec4899;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    /* Grid layout limits */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Navbar styling */
+    header {
+      padding: 1.25rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: rgba(3, 3, 3, 0.75);
+    }
+
+    .header-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.6rem;
+      font-weight: 900;
+      font-family: 'Outfit', sans-serif;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo i {
+      color: var(--primary);
+      -webkit-text-fill-color: initial;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--text-sub);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+
+    /* Responsive buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      padding: 0.8rem 1.8rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: white;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
+      background-size: 150% 150%;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+      background-position: right center;
+    }
+
+    .btn-secondary {
+      background-color: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(5px);
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 5rem 0 3rem 0;
+      text-align: center;
+    }
+
+    .hero-content {
+      max-width: 850px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: rgba(139, 92, 246, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      padding: 0.4rem 1.2rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    }
+
+    .hero-content h1 {
+      font-size: 3.8rem;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-content p {
+      font-size: 1.25rem;
+      color: var(--text-sub);
+      margin-bottom: 2.5rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-ctas {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 4rem;
+    }
+
+    /* Responsive App Mockup */
+    .app-mockup {
+      background: #0b0b0d;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 0.75rem;
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
+      max-width: 950px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .app-mockup::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 17px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .mockup-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+
+    .mockup-title {
+      color: var(--text-sub);
+      font-size: 0.8rem;
+      margin-left: 0.75rem;
+      font-family: monospace;
+    }
+
+    .mockup-body {
+      display: flex;
+      height: 420px;
+      gap: 0.75rem;
+    }
+
+    .mockup-sidebar {
+      width: 32%;
+      background: #121214;
+      border-radius: 10px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      text-align: left;
+    }
+
+    .mockup-field {
+      height: 38px;
+      border: 1px solid var(--card-border);
+      background: #1a1a1e;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding: 0 0.75rem;
+      color: #52525b;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .mockup-btn {
+      background: var(--primary);
+      color: white;
+      height: 40px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    .mockup-profile {
+      background: #1a1a1e;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-top: auto;
+    }
+
+    .mockup-profile-title {
+      color: var(--success);
+      font-weight: bold;
+      font-size: 0.75rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .mockup-profile-detail {
+      color: white;
+      font-size: 0.7rem;
+    }
+
+    .mockup-main {
+      flex: 1;
+      background: #0f0f11;
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .mockup-terminal {
+      background: #050507;
+      flex: 1;
+      border-radius: 8px;
+      padding: 1.25rem;
+      font-family: 'Consolas', monospace;
+      color: var(--success);
+      font-size: 0.82rem;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      text-align: left;
+      line-height: 1.5;
+    }
+
+    /* Grid Features Section */
+    .features {
+      padding: 6rem 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: linear-gradient(180deg, rgba(3,3,3,0) 0%, rgba(20,20,25,0.4) 50%, rgba(3,3,3,0) 100%);
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-title h2 {
+      font-size: 2.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-title p {
+      color: var(--text-sub);
+      font-size: 1.15rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+    }
+
+    .feature-card {
+      background: var(--dark-gradient);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 60%);
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--card-border-hover);
+      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.05);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover .feature-icon {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      transform: scale(1.05);
+    }
+
+    .feature-card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 0.8rem;
+      font-weight: 700;
+    }
+
+    .feature-card p {
+      color: var(--text-sub);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Pricing Section */
+    .pricing {
+      padding: 7rem 0;
+    }
+
+    .pricing-card {
+      background: linear-gradient(180deg, #0e0e11 0%, #050507 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      max-width: 550px;
+      margin: 0 auto;
+      padding: 4rem 3rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    .pricing-card::after {
+      content: '';
+      position: absolute;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+    }
+
+    .pricing-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--accent-gradient);
+    }
+
+    .pricing-badge {
+      display: inline-block;
+      background: rgba(139, 92, 246, 0.1);
+      color: #c084fc;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      padding: 0.4rem 1.2rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      margin-bottom: 2rem;
+      letter-spacing: 0.05em;
+    }
+
+    .price {
+      font-size: 4.5rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #ffffff, #d4d4d8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .price span {
+      font-size: 1.3rem;
+      color: var(--text-sub);
+      font-weight: 400;
+      -webkit-text-fill-color: initial;
+    }
+
+    .pricing-card h3 {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .pricing-card p {
+      color: var(--text-sub);
+      margin-bottom: 2.5rem;
+      font-size: 1.05rem;
+    }
+
+    .pricing-features {
+      list-style: none;
+      text-align: left;
+      margin-bottom: 3rem;
+      max-width: 380px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .pricing-features li {
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    .pricing-features i {
+      color: var(--success);
+      font-size: 1.1rem;
+    }
+
+    /* Modal Layout */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-content {
+      background-color: #0e0e11;
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 500px;
+      padding: 3rem 2.5rem;
+      position: relative;
+      transform: scale(0.92);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal.active .modal-content {
+      transform: scale(1);
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .close-modal:hover {
+      color: white;
+    }
+
+    .modal-header {
+      margin-bottom: 2rem;
+    }
+
+    .modal-header h3 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-header p {
+      color: var(--text-sub);
+      font-size: 0.95rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-sub);
+    }
+
+    .form-control {
+      width: 100%;
+      background-color: #050507;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 0.9rem 1.1rem;
+      color: white;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .form-error {
+      color: #ef4444;
+      font-size: 0.85rem;
+      margin-top: 0.4rem;
+      display: none;
+    }
+
+    /* Success pane */
+    .success-pane {
+      display: none;
+      text-align: center;
+    }
+
+    .success-icon {
+      font-size: 4rem;
+      color: var(--success);
+      margin-bottom: 1.5rem;
+      animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .license-box {
+      background-color: #050507;
+      border: 1px dashed rgba(59, 130, 246, 0.4);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+      font-family: 'Consolas', monospace;
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-copy {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      transition: color 0.2s;
+      font-size: 1.2rem;
+    }
+
+    .btn-copy:hover {
+      color: var(--accent);
+    }
+
+    .download-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .download-grid .btn {
+      padding: 0.9rem;
+      font-size: 0.9rem;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Footer styling */
+    footer {
+      padding: 4rem 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      text-align: center;
+      color: var(--text-sub);
+      font-size: 0.95rem;
+      background: #010102;
+    }
+
+    /* RESPONSIVE DESIGN - Mobile / Tablet Optimization */
+    @media (max-width: 968px) {
+      .hero-content h1 {
+        font-size: 2.8rem;
+      }
+      .mockup-body {
+        flex-direction: column;
+        height: auto;
+      }
+      .mockup-sidebar {
+        width: 100%;
+        height: auto;
+      }
+      .mockup-terminal {
+        height: 200px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero-content h1 {
+        font-size: 2.2rem;
+      }
+      .hero-content p {
+        font-size: 1.1rem;
+      }
+      .hero-ctas {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0 1rem;
+      }
+      .nav-links {
+        display: none; /* simple mobile design */
+      }
+      .pricing-card {
+        padding: 2.5rem 1.5rem;
+      }
+      .price {
+        font-size: 3.5rem;
+      }
+      .download-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal-content {
+        padding: 2rem 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Blobs -->
+  <div class="ambient-blob blob-1"></div>
+  <div class="ambient-blob blob-2"></div>
+  <div class="ambient-blob blob-3"></div>
+
+  <!-- Header / Navbar -->
+  <header>
+    <div class="container header-nav">
+      <div class="logo">
+        <i class="fa-solid fa-bolt-lightning"></i>
+        <span>VeloLeads</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><button onclick="openPurchaseModal()" class="btn btn-primary btn-sm" id="nav-cta" style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">Get Started</button></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-content">
+      <div class="badge">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Playwright Engine + Smart Lead Qualification</span>
+      </div>
+      <h1>Scrape Unlimited B2B Leads. Delivered to Your Inbox.</h1>
+      <p>A zero-limits standalone client that scrapes local businesses, extracts verified emails/phone numbers, qualifies them with AI descriptions, and schedules runs automatically.</p>
+      
+      <div class="hero-ctas">
+        <button onclick="openPurchaseModal()" class="btn btn-primary">
+          <span>Get Started Now (₹1/Yr)</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <a href="#features" class="btn btn-secondary">Explore Features</a>
+      </div>
+
+      <!-- App Mockup -->
+      <div class="app-mockup">
+        <div class="mockup-header">
+          <span class="dot dot-red"></span>
+          <span class="dot dot-yellow"></span>
+          <span class="dot dot-green"></span>
+          <span class="mockup-title">veloleads-app-runtime.exe</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-sidebar">
+            <div class="mockup-field">Locations: Mumbai, Bangalore</div>
+            <div class="mockup-field">Keywords: Cafes, Restaurants</div>
+            <div class="mockup-field">Emails: admin@corp.com</div>
+            <div class="mockup-btn">RUN CAMPAIGN</div>
+            
+            <div class="mockup-profile">
+              <div class="mockup-profile-title"><i class="fa-solid fa-circle-check"></i> ACTIVE LICENSE</div>
+              <div class="mockup-profile-detail">User: rajesh_comet</div>
+              <div class="mockup-profile-detail">Valid: 1 Year Premium</div>
+            </div>
+          </div>
+          <div class="mockup-main">
+            <div class="mockup-terminal">
+              [System] Loading Chromium Engine... Ok.<br>
+              [*] Target: Scraping "Cafes in Mumbai"<br>
+              [+] Found Lead: Blue Tokai Coffee Roasters (+91 22 5550198)<br>
+              [~] Fetching website contact details for: bluetokaicoffee.com...<br>
+              [+] Extracted Email: info@bluetokaicoffee.com<br>
+              [+] Scrape campaign complete. Generated leads_report.xlsx<br>
+              [*] Dispatching report sheet to 'admin@corp.com'... SUCCESS.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-title">
+        <h2>Unmatched Leads Extraction Power</h2>
+        <p>Everything you need to automate local outreach and build massive B2B databases.</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-map-location-dot"></i>
+          </div>
+          <h3>Google Maps Crawler</h3>
+          <p>Extract leads globally from any location. Bypasses Maps limits to find 100% of available local business profiles.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-envelope-open-text"></i>
+          </div>
+          <h3>Automated Email Delivery</h3>
+          <p>Scrape leads in the background and have the generated Excel sheets automatically emailed to your target list instantly.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <h3>Daily Scheduler</h3>
+          <p>Schedule up to 4 runs per day. The app wakes up, runs the search campaign, saves data, and mails the logs without lifting a finger.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <h3>AI Prompt Filtering</h3>
+          <p>Qualify leads using custom descriptions (e.g., "Top rated only", "Only with active websites") to ensure you only collect high-intent leads.</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <h3>Smart DB Rotation</h3>
+          <p>Rotates automatically between 3 active SQLite database slots once a database reaches 50 Lakh rows. Supports massive 1.5 Crore scale.</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h3>Anti-Piracy Security</h3>
+          <p>Your subscription is locked securely to your computer's motherboard/CPU fingerprint, protecting your account from unauthorized reuse.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="features" id="how-it-works" style="background: transparent;">
+    <div class="container">
+      <div class="section-title">
+        <h2>3 Minutes to Launch</h2>
+        <p>No complicated setups. Buy, download, and start scraping.</p>
+      </div>
+
+      <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        <div class="feature-card" style="text-align: center;">
+          <div style="font-size: 2.2rem; font-family: 'Outfit'; font-weight: 900; color: var(--primary); margin-bottom: 1rem;">01</div>
+          <h3>Enter Details & Pay</h3>
+          <p>Provide a unique username and your email. Proceed to Razorpay checkout to buy the ₹1/yr license.</p>
+        </div>
+        <div class="feature-card" style="text-align: center;">
+          <div style="font-size: 2.2rem; font-family: 'Outfit'; font-weight: 900; color: var(--primary); margin-bottom: 1rem;">02</div>
+          <h3>Get License & App</h3>
+          <p>Copy your unique license key from the screen, and download the Windows or Mac zip bundle.</p>
+        </div>
+        <div class="feature-card" style="text-align: center;">
+          <div style="font-size: 2.2rem; font-family: 'Outfit'; font-weight: 900; color: var(--primary); margin-bottom: 1rem;">03</div>
+          <h3>Run Scrapes</h3>
+          <p>Launch the app, enter your license details, and start scraping leads immediately.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <div class="section-title">
+        <h2>One Plan. Complete Access.</h2>
+        <p>No monthly limits, no cap on scrapings. Unbeatable price.</p>
+      </div>
+
+      <div class="pricing-card">
+        <span class="pricing-badge">YEARLY BILLING</span>
+        <h3>VeloLeads Premium</h3>
+        <p>Complete lead scraper & email suite.</p>
+        <div class="price">₹1<span> / year</span></div>
+        
+        <ul class="pricing-features">
+          <li><i class="fa-solid fa-check"></i> <span>Unlimited Lead Scraping campaigns</span></li>
+          <li><i class="fa-solid fa-check"></i> <span>Automated Email Reporting</span></li>
+          <li><i class="fa-solid fa-check"></i> <span>Daily Campaign Auto-Scheduler</span></li>
+          <li><i class="fa-solid fa-check"></i> <span>AI Filters & Lead Qualification</span></li>
+          <li><i class="fa-solid fa-check"></i> <span>Hardware-Locked Anti-Sharing license</span></li>
+          <li><i class="fa-solid fa-check"></i> <span>Windows (.exe) & macOS (.app) downloads</span></li>
+        </ul>
+
+        <button onclick="openPurchaseModal()" class="btn btn-primary" style="width: 100%; padding: 1.1rem; font-size: 1rem; border-radius: 12px;">
+          Buy License Now
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p style="margin-bottom: 0.5rem;">&copy; 2026 VeloLeads. Automated Lead Generation. All rights reserved.</p>
+      <p style="font-size: 0.8rem; color: #52525b;">Secure payments processed via Razorpay. Subscriptions are billed annually.</p>
+    </div>
+  </footer>
+
+  <!-- Modal -->
+  <div class="modal" id="purchase-modal">
+    <div class="modal-content">
+      <button class="close-modal" onclick="closePurchaseModal()">&times;</button>
+      
+      <!-- Form Pane -->
+      <div class="form-pane" id="form-pane">
+        <div class="modal-header">
+          <h3>Create Your Profile</h3>
+          <p>Please enter a unique username and active email. Your license key and login will be bound to these credentials.</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="username">Choose Unique Username</label>
+          <input type="text" id="username" class="form-control" placeholder="e.g. rajesh_leads">
+          <div class="form-error" id="username-error">Username is already taken.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Your Email Address</label>
+          <input type="email" id="email" class="form-control" placeholder="e.g. rajesh@gmail.com">
+          <div class="form-error" id="email-error">Please enter a valid email address.</div>
+        </div>
+
+        <button onclick="initiatePayment()" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 1rem; border-radius: 10px;" id="pay-btn">
+          <span class="spinner" id="pay-spinner"></span>
+          <span>Pay ₹1 & Activate License</span>
+        </button>
+      </div>
+
+      <!-- Success Pane -->
+      <div class="success-pane" id="success-pane">
+        <div class="success-icon">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <h3>Subscription Activated!</h3>
+        <p style="color: var(--text-sub); margin-top: 0.5rem; font-size: 0.95rem;">Here is your unique activation key. Copy it now to activate the app.</p>
+        
+        <div class="license-box">
+          <span id="license-key-text">VELO-XXXX-XXXX-XXXX</span>
+          <button class="btn-copy" onclick="copyLicenseKey()" title="Copy to clipboard">
+            <i class="fa-regular fa-copy" id="copy-icon"></i>
+          </button>
+        </div>
+
+        <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 1rem;">Download the VeloLeads client below:</p>
+
+        <div class="download-grid">
+          <a href="/download/VeloLeads-Windows-EXE.zip" class="btn btn-secondary">
+            <i class="fa-brands fa-windows" style="color: #00a4ef;"></i>
+            <span>Windows (.zip)</span>
+          </a>
+          <a href="/download/VeloLeads-macOS-App.zip" class="btn btn-secondary">
+            <i class="fa-brands fa-apple" style="color: #ffffff;"></i>
+            <span>macOS (.zip)</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById('purchase-modal');
+    const formPane = document.getElementById('form-pane');
+    const successPane = document.getElementById('success-pane');
+    
+    const inputUsername = document.getElementById('username');
+    const inputEmail = document.getElementById('email');
+    const usernameError = document.getElementById('username-error');
+    const emailError = document.getElementById('email-error');
+    const paySpinner = document.getElementById('pay-spinner');
+    const payBtn = document.getElementById('pay-btn');
+
+    let isRenewal = false;
+
+    function openPurchaseModal(renewalUser = null) {
+      modal.classList.add('active');
+      formPane.style.display = 'block';
+      successPane.style.display = 'none';
+      
+      // Reset errors
+      usernameError.style.display = 'none';
+      emailError.style.display = 'none';
+
+      if (renewalUser) {
+        isRenewal = true;
+        inputUsername.value = renewalUser;
+        inputUsername.disabled = true;
+        
+        const savedEmail = new URLSearchParams(window.location.search).get('email');
+        if (savedEmail) {
+          inputEmail.value = savedEmail;
+          inputEmail.disabled = true;
+        }
+        document.querySelector('.modal-header h3').textContent = 'Renew Your Subscription';
+        document.querySelector('.modal-header p').textContent = 'Confirm your profile details to extend your licensing validities for another 1 year.';
+      } else {
+        isRenewal = false;
+        inputUsername.value = '';
+        inputEmail.value = '';
+        inputUsername.disabled = false;
+        inputEmail.disabled = false;
+        document.querySelector('.modal-header h3').textContent = 'Create Your Profile';
+        document.querySelector('.modal-header p').textContent = 'Please enter a unique username and active email. Your license key and login will be bound to these credentials.';
+      }
+    }
+
+    function closePurchaseModal() {
+      modal.classList.remove('active');
+    }
+
+    function copyLicenseKey() {
+      const keyText = document.getElementById('license-key-text').textContent;
+      navigator.clipboard.writeText(keyText).then(() => {
+        const copyIcon = document.getElementById('copy-icon');
+        copyIcon.className = 'fa-solid fa-check';
+        copyIcon.style.color = 'var(--success)';
+        setTimeout(() => {
+          copyIcon.className = 'fa-regular fa-copy';
+          copyIcon.style.color = 'var(--primary)';
+        }, 2000);
+      });
+    }
+
+    async function initiatePayment() {
+      const username = inputUsername.value.trim();
+      const email = inputEmail.value.trim();
+
+      usernameError.style.display = 'none';
+      emailError.style.display = 'none';
+
+      if (!username || !email) {
+        alert('Please fill in all fields.');
+        return;
+      }
+
+      paySpinner.style.display = 'inline-block';
+      payBtn.disabled = true;
+
+      try {
+        if (!isRenewal) {
+          const checkRes = await fetch('/api/check-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email })
+          });
+          const checkData = await checkRes.json();
+
+          if (!checkData.success) {
+            paySpinner.style.display = 'none';
+            payBtn.disabled = false;
+            if (checkData.message.toLowerCase().includes('username')) {
+              usernameError.textContent = checkData.message;
+              usernameError.style.display = 'block';
+            } else {
+              emailError.textContent = checkData.message;
+              emailError.style.display = 'block';
+            }
+            return;
+          }
+        }
+
+        const orderRes = await fetch('/api/payment/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, is_renewal: isRenewal })
+        });
+        const orderData = await orderRes.json();
+
+        if (!orderData.success) {
+          throw new Error(orderData.message || 'Failed to create order.');
+        }
+
+        const options = {
+          key: orderData.razorpay_key,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: "VeloLeads",
+          description: "1-Year Premium License Subscription",
+          order_id: orderData.razorpay_order_id,
+          handler: async function (response) {
+            try {
+              const verifyRes = await fetch('/api/payment/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: orderData.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  username: username,
+                  email: email,
+                  is_renewal: isRenewal
+                })
+              });
+              const verifyData = await verifyRes.json();
+
+              if (verifyData.success) {
+                formPane.style.display = 'none';
+                successPane.style.display = 'block';
+                document.getElementById('license-key-text').textContent = verifyData.license_key;
+              } else {
+                alert('Payment verification failed: ' + verifyData.message);
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Error verifying payment.');
+            } finally {
+              paySpinner.style.display = 'none';
+              payBtn.disabled = false;
+            }
+          },
+          prefill: {
+            name: username,
+            email: email
+          },
+          theme: {
+            color: "#3b82f6"
+          },
+          modal: {
+            ondismiss: function() {
+              paySpinner.style.display = 'none';
+              payBtn.disabled = false;
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+
+      } catch (error) {
+        console.error(error);
+        alert('Error: ' + error.message);
+        paySpinner.style.display = 'none';
+        payBtn.disabled = false;
+      }
+    }
+
+    // Auto-check url parameters for renewals
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const renewUser = params.get('renew');
+      if (renewUser) {
+        openPurchaseModal(renewUser);
+      }
+    });
+  </script>
+</body>
+</html>

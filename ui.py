@@ -4,6 +4,11 @@ import time
 import os
 import sys
 import json
+import requests
+import platform
+import uuid
+import hashlib
+import webbrowser
 
 # Force Playwright to use the global browser directory, ignoring PyInstaller's _MEI override
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.join(os.path.expanduser("~"), "AppData", "Local", "ms-playwright")
@@ -16,6 +21,37 @@ try:
     import db
 except ImportError as e:
     print(f"Error importing modules: {e}")
+
+def get_machine_id():
+    """Generates a stable, unique SHA-256 hardware fingerprint."""
+    try:
+        node = str(uuid.getnode())
+        processor = platform.processor() or "unknown_proc"
+        system = platform.system() or "unknown_sys"
+        raw_fingerprint = f"{node}-{processor}-{system}"
+        return hashlib.sha256(raw_fingerprint.encode('utf-8')).hexdigest()
+    except Exception:
+        try:
+            return hashlib.sha256(platform.node().encode('utf-8')).hexdigest()
+        except Exception:
+            return "fallback_machine_id_12345"
+
+def get_api_url():
+    """Reads licensing API URL from config.json, with localhost fallback."""
+    try:
+        if getattr(sys, "frozen", False):
+            config_path = os.path.join(os.path.dirname(sys.executable), "config.json")
+        else:
+            config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+            
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                return cfg.get("licensing_api_url", "http://localhost:5000")
+    except Exception:
+        pass
+    return "http://localhost:5000"
+
 
 def install_browsers(log_callback):
     """Automatically installs Playwright Chromium if missing, supporting PyInstaller bundles."""
@@ -48,30 +84,240 @@ class App(ctk.CTk):
         self.geometry("1000x750")
         self.configure(fg_color="#121212") # Deep dark background for main window
         
-        # 50/50 Layout (Equal weights)
-        self.grid_columnconfigure(0, weight=1, uniform="half")
-        self.grid_columnconfigure(1, weight=1, uniform="half")
-        self.grid_rowconfigure(0, weight=1)
-        
         # Define Premium Fonts
         self.font_title = ctk.CTkFont(family="Segoe UI", size=28, weight="bold")
         self.font_label = ctk.CTkFont(family="Segoe UI", size=13, weight="bold")
         self.font_input = ctk.CTkFont(family="Segoe UI", size=13)
         self.font_btn = ctk.CTkFont(family="Segoe UI", size=14, weight="bold")
         self.font_log = ctk.CTkFont(family="Consolas", size=13)
+
+        # Determine paths for settings and license files
+        if getattr(sys, "frozen", False):
+            self.settings_path = os.path.join(os.path.dirname(sys.executable), "settings.json")
+            self.license_path = os.path.join(os.path.dirname(sys.executable), "license_info.json")
+        else:
+            self.settings_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
+            self.license_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "license_info.json")
+
+        self.license_username = ""
+        self.license_email = ""
+        self.license_expires_at = ""
+
+        # Loading screen
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.loading_frame = ctk.CTkFrame(self, fg_color="#121212")
+        self.loading_frame.grid(row=0, column=0, sticky="nsew")
+        self.loading_frame.grid_columnconfigure(0, weight=1)
+        self.loading_frame.grid_rowconfigure(0, weight=1)
+
+        self.loading_lbl = ctk.CTkLabel(self.loading_frame, text="Checking subscription validity...", font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"), text_color="#A1A1AA")
+        self.loading_lbl.grid(row=0, column=0)
+
+        # Setup close protocol
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # Run background license check thread
+        threading.Thread(target=self.background_license_check, daemon=True).start()
+
+    def background_license_check(self):
+        if not os.path.exists(self.license_path):
+            self.after(0, self.go_to_login)
+            return
+
+        try:
+            with open(self.license_path, "r", encoding="utf-8") as f:
+                lic = json.load(f)
+            
+            username = lic.get("username")
+            license_key = lic.get("license_key")
+            expires_at_str = lic.get("expires_at")
+            
+            if not username or not license_key:
+                self.after(0, self.go_to_login)
+                return
+
+            self.license_username = username
+            self.license_email = lic.get("email", username)
+            self.license_expires_at = expires_at_str
+
+            # Check validity via online licensing server
+            api_url = get_api_url()
+            machine_id = get_machine_id()
+            payload = {
+                "username": username,
+                "license_key": license_key,
+                "machine_id": machine_id
+            }
+
+            try:
+                res = requests.post(f"{api_url}/api/license/verify", json=payload, timeout=6)
+                data = res.json()
+
+                if res.status_code == 200 and data.get("success"):
+                    # Update local copy in case of renewal
+                    lic["expires_at"] = data.get("expires_at", expires_at_str)
+                    self.license_expires_at = lic["expires_at"]
+                    with open(self.license_path, "w", encoding="utf-8") as f:
+                        json.dump(lic, f, indent=4)
+                    
+                    self.after(0, self.go_to_main)
+                else:
+                    self.after(0, self.go_to_login)
+            except Exception:
+                # Connection failed, fallback to local date validation (grace period offline support)
+                from datetime import datetime
+                try:
+                    exp_date_str = expires_at_str.split("T")[0]
+                    expiry = datetime.strptime(exp_date_str, "%Y-%m-%d")
+                    if expiry > datetime.now():
+                        self.after(0, self.go_to_main)
+                    else:
+                        self.after(0, self.go_to_login)
+                except Exception:
+                    self.after(0, self.go_to_login)
+        except Exception:
+            self.after(0, self.go_to_login)
+
+    def go_to_login(self):
+        if hasattr(self, "loading_frame"):
+            self.loading_frame.destroy()
+        self.setup_login_ui()
+
+    def go_to_main(self):
+        if hasattr(self, "loading_frame"):
+            self.loading_frame.destroy()
+        self.setup_main_ui()
+
+    def setup_login_ui(self):
+        # Configure layout for center login box
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        INPUT_FG = "#1E1E24"
+        INPUT_BORDER = "#2B2B36"
+        ACCENT_COLOR = "#0066CC"
+        ACCENT_HOVER = "#0052A3"
+        SIDEBAR_BG = "#18181B"
+
+        self.login_frame = ctk.CTkFrame(self, fg_color=SIDEBAR_BG, corner_radius=12, border_width=1, border_color=INPUT_BORDER, width=480, height=480)
+        self.login_frame.grid(row=0, column=0, sticky="")
+        self.login_frame.grid_propagate(False)
+        self.login_frame.grid_columnconfigure(0, weight=1)
+
+        self.login_logo = ctk.CTkLabel(self.login_frame, text="VeloLeads", font=ctk.CTkFont(family="Segoe UI", size=32, weight="bold"), text_color="#FFFFFF")
+        self.login_logo.grid(row=0, column=0, padx=25, pady=(35, 5))
+
+        self.login_sub = ctk.CTkLabel(self.login_frame, text="Premium License Activation Required", font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color="#A1A1AA")
+        self.login_sub.grid(row=1, column=0, padx=25, pady=(0, 25))
+
+        inputs_config = {"border_width": 1, "corner_radius": 8, "border_color": INPUT_BORDER, "fg_color": INPUT_FG, "font": self.font_input}
+
+        self.login_user_label = ctk.CTkLabel(self.login_frame, text="Username or Email", font=self.font_label, text_color="#A1A1AA")
+        self.login_user_label.grid(row=2, column=0, padx=35, pady=(5, 2), sticky="w")
+        self.login_user_entry = ctk.CTkEntry(self.login_frame, height=42, placeholder_text="Enter your registered username/email", **inputs_config)
+        self.login_user_entry.grid(row=3, column=0, padx=35, pady=(0, 12), sticky="ew")
+
+        self.login_key_label = ctk.CTkLabel(self.login_frame, text="License Key", font=self.font_label, text_color="#A1A1AA")
+        self.login_key_label.grid(row=4, column=0, padx=35, pady=(5, 2), sticky="w")
+        self.login_key_entry = ctk.CTkEntry(self.login_frame, height=42, placeholder_text="VELO-XXXX-XXXX-XXXX", **inputs_config)
+        self.login_key_entry.grid(row=5, column=0, padx=35, pady=(0, 10), sticky="ew")
+
+        self.login_error_label = ctk.CTkLabel(self.login_frame, text="", font=ctk.CTkFont(family="Segoe UI", size=12), text_color="#EF4444", wraplength=400)
+        self.login_error_label.grid(row=6, column=0, padx=35, pady=(0, 15), sticky="w")
+
+        # Action button container
+        self.login_btn_frame = ctk.CTkFrame(self.login_frame, fg_color="transparent")
+        self.login_btn_frame.grid(row=7, column=0, padx=35, pady=(0, 30), sticky="ew")
+        self.login_btn_frame.grid_columnconfigure((0, 1), weight=1)
+
+        self.login_submit_btn = ctk.CTkButton(self.login_btn_frame, text="ACTIVATE", command=self.attempt_activation,
+                                             height=40, corner_radius=8, font=self.font_btn,
+                                             fg_color=ACCENT_COLOR, hover_color=ACCENT_HOVER)
+        self.login_submit_btn.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+
+        self.login_buy_btn = ctk.CTkButton(self.login_btn_frame, text="BUY LICENSE", command=lambda: webbrowser.open(get_api_url()),
+                                          height=40, corner_radius=8, font=self.font_btn,
+                                          fg_color="#27272A", hover_color="#3F3F46", border_width=1, border_color="#3F3F46")
+        self.login_buy_btn.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+
+    def attempt_activation(self):
+        username = self.login_user_entry.get().strip()
+        license_key = self.login_key_entry.get().strip()
+
+        if not username or not license_key:
+            self.login_error_label.configure(text="Please fill in both username and license key.")
+            return
+
+        self.login_submit_btn.configure(state="disabled", text="ACTIVATING...")
+        self.login_buy_btn.configure(state="disabled")
+        self.login_error_label.configure(text="")
+
+        threading.Thread(target=self.run_activation, args=(username, license_key), daemon=True).start()
+
+    def run_activation(self, username, license_key):
+        api_url = get_api_url()
+        machine_id = get_machine_id()
         
+        payload = {
+            "username": username,
+            "license_key": license_key,
+            "machine_id": machine_id
+        }
+
+        try:
+            res = requests.post(f"{api_url}/api/license/activate", json=payload, timeout=8)
+            data = res.json()
+
+            if res.status_code == 200 and data.get("success"):
+                license_data = {
+                    "username": data.get("username", username),
+                    "email": data.get("email", username), 
+                    "license_key": license_key,
+                    "expires_at": data.get("expires_at")
+                }
+                
+                with open(self.license_path, "w", encoding="utf-8") as f:
+                    json.dump(license_data, f, indent=4)
+
+                self.license_username = license_data["username"]
+                self.license_email = license_data["email"]
+                self.license_expires_at = license_data["expires_at"]
+
+                self.after(0, self.activation_success)
+            else:
+                msg = data.get("message", "License activation failed.")
+                self.after(0, lambda: self.activation_failed(msg))
+        except Exception as e:
+            self.after(0, lambda: self.activation_failed(f"Could not connect to verification server: {str(e)}"))
+
+    def activation_success(self):
+        if hasattr(self, "login_frame"):
+            self.login_frame.destroy()
+        self.setup_main_ui()
+
+    def activation_failed(self, message):
+        self.login_submit_btn.configure(state="normal", text="ACTIVATE")
+        self.login_buy_btn.configure(state="normal")
+        self.login_error_label.configure(text=message)
+
+    def renew_plan(self):
+        """Opens renewal page in browser with prefilled username/email parameters."""
+        api_url = get_api_url()
+        webbrowser.open(f"{api_url}?renew={self.license_username}&email={self.license_email}")
+
+    def setup_main_ui(self):
+        # Configure layout for main app screen (50/50 weights)
+        self.grid_columnconfigure(0, weight=1, uniform="half")
+        self.grid_columnconfigure(1, weight=1, uniform="half")
+        self.grid_rowconfigure(0, weight=1)
+
         # Styling Constants
         INPUT_FG = "#1E1E24"
         INPUT_BORDER = "#2B2B36"
         ACCENT_COLOR = "#0066CC"
         ACCENT_HOVER = "#0052A3"
         SIDEBAR_BG = "#18181B"
-        
-        # Determine path for settings file
-        if getattr(sys, "frozen", False):
-            self.settings_path = os.path.join(os.path.dirname(sys.executable), "settings.json")
-        else:
-            self.settings_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
         
         # --- SIDEBAR (Settings & Inputs) ---
         self.sidebar_frame = ctk.CTkFrame(self, width=420, corner_radius=0, fg_color=SIDEBAR_BG)
@@ -81,15 +327,42 @@ class App(ctk.CTk):
         # Header inside sidebar
         self.sidebar_header = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
         self.sidebar_header.grid(row=0, column=0, padx=25, pady=(30, 20), sticky="ew")
-        self.sidebar_header.grid_columnconfigure(0, weight=1)
+        self.sidebar_header.grid_columnconfigure(0, weight=0)
+        self.sidebar_header.grid_columnconfigure(1, weight=1)
+        self.sidebar_header.grid_columnconfigure(2, weight=0)
         
         self.logo_label = ctk.CTkLabel(self.sidebar_header, text="VeloLeads", font=self.font_title, text_color="#FFFFFF")
         self.logo_label.grid(row=0, column=0, sticky="w")
+
+        # --- HEADER PROFILE (Sleek User Badge in Top Middle) ---
+        self.header_profile = ctk.CTkFrame(self.sidebar_header, fg_color="#1E1E24", corner_radius=8, border_width=1, border_color=INPUT_BORDER)
+        self.header_profile.grid(row=0, column=1, padx=(15, 10), sticky="ew")
+
+        self.info_container = ctk.CTkFrame(self.header_profile, fg_color="transparent")
+        self.info_container.pack(side="left", padx=8, pady=4)
+
+        self.status_lbl = ctk.CTkLabel(self.info_container, text="● PREMIUM ACTIVE", font=ctk.CTkFont(family="Segoe UI", size=9, weight="bold"), text_color="#10B981")
+        self.status_lbl.pack(anchor="w")
+
+        exp_dt = "Expired"
+        try:
+            exp_dt = self.license_expires_at.split("T")[0]
+        except Exception:
+            exp_dt = self.license_expires_at
+
+        user_details = f"{self.license_username} ({exp_dt})"
+        self.details_lbl = ctk.CTkLabel(self.info_container, text=user_details, font=ctk.CTkFont(family="Segoe UI", size=10), text_color="#FFFFFF")
+        self.details_lbl.pack(anchor="w")
+
+        self.renew_badge_btn = ctk.CTkButton(self.header_profile, text="RENEW", command=self.renew_plan,
+                                            width=50, height=22, corner_radius=4, font=ctk.CTkFont(family="Segoe UI", size=9, weight="bold"),
+                                            fg_color=ACCENT_COLOR, hover_color=ACCENT_HOVER)
+        self.renew_badge_btn.pack(side="right", padx=8, pady=4)
         
         self.start_btn = ctk.CTkButton(self.sidebar_header, text="START SCRAPING", command=self.start_scraping, 
                                        width=120, height=35, corner_radius=8, font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"), 
                                        fg_color=ACCENT_COLOR, hover_color=ACCENT_HOVER)
-        self.start_btn.grid(row=0, column=1, sticky="e")
+        self.start_btn.grid(row=0, column=2, sticky="e")
         
         # Inputs Dictionary for cleaner styling application
         inputs_config = {"border_width": 1, "corner_radius": 8, "border_color": INPUT_BORDER, "fg_color": INPUT_FG, "font": self.font_input}
@@ -150,9 +423,9 @@ class App(ctk.CTk):
                                       fg_color="#27272A", hover_color="#3F3F46", border_width=1, border_color="#3F3F46")
         self.save_btn.grid(row=13, column=0, padx=25, pady=(15, 5), sticky="ew")
         
-        # Spacer
+        # Spacer to push everything up
         self.sidebar_frame.grid_rowconfigure(14, weight=1)
-        
+
         # --- MAIN AREA (Logs & Progress) ---
         self.main_frame = ctk.CTkFrame(self, fg_color="#121212", corner_radius=0)
         self.main_frame.grid(row=0, column=1, sticky="nsew")
@@ -193,9 +466,6 @@ class App(ctk.CTk):
 
         self.is_scraping = False
         
-        # Setup cleanup on close
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
         # Load saved settings
         self.load_settings()
         
@@ -203,6 +473,7 @@ class App(ctk.CTk):
         self.last_run_dates = {}
         self.scheduler_thread = threading.Thread(target=self.scheduler_loop, daemon=True)
         self.scheduler_thread.start()
+
 
     def log(self, message):
         """Thread-safe logging to the terminal text box"""
@@ -307,7 +578,8 @@ class App(ctk.CTk):
             self.log(f"[!] Warning: Could not save settings: {e}")
 
     def on_closing(self):
-        self.save_settings()
+        if hasattr(self, "loc_entry"):
+            self.save_settings()
         self.destroy()
 
     def start_scraping(self):

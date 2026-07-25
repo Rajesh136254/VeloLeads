@@ -1,4 +1,5 @@
 {
+  "licensing_api_url": "http://localhost:5000",
   "search": {
     "cities": [
       "Hyderabad",

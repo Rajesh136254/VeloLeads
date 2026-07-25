@@ -1,0 +1,23 @@
+# Node.js dependencies
+server/node_modules/
+
+# Python virtual environment & runtime files
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# PyInstaller build files & large binary output
+build/
+dist/
+*.zip
+*.spec
+license_info.json
+
+# Databases & local configs
+*.db
+*.sqlite
+db_state.json
+
+# Environment variables
+server/.env
