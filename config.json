@@ -1,0 +1,45 @@
+{
+  "search": {
+    "cities": [
+      "Hyderabad",
+      "Bangalore",
+      "New York",
+      "London",
+      "Dubai",
+      "Singapore",
+      "Vijayawada",
+      "Vizag"
+    ],
+    "keywords": [
+      "restaurants",
+      "cafes",
+      "dhabas",
+      "hotels"
+    ],
+    "leads_per_day_target": 50,
+    "max_scrolls": 5,
+    "request_timeout_seconds": 10,
+    "dynamic_places_mode": true
+  },
+  "email": {
+    "sender_email": "rajeswarareddy254@gmail.com",
+    "recipient_email": ["rajeswarareddy254@gmail.com", "rn7187240@gmail.com","vigneswari136@gmail.com"],
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_use_ssl": false,
+    "smtp_timeout_seconds": 30,
+    "smtp_password": "cork fchz ltgp iryz"
+  },
+  "promotion": {
+    "app_name": "RedSorm",
+    "app_url": "https://redsorm.in",
+    "pitch_template": "Hi {BusinessName},\n\nI noticed your establishment '{BusinessName}' listed in {City} and wanted to reach out. We recently launched RedSorm (https://redsorm.in), an all-in-one restaurant and hotel management software designed specifically for food businesses in India.\n\nRedSorm helps you with:\n1. Digital billing & lightning-fast POS\n2. Smart table management & QR ordering\n3. Inventory & kitchen stock tracking\n4. Staff management and detailed profit analysis\n\nMany restaurants in our region have increased their monthly savings by 20% just by moving to RedSorm. We are offering a free, no-obligation demo and a 14-day premium trial for new partners.\n\nAre you available for a quick call this week? You can reach me at this email or call us directly.\n\nBest regards,\nRajeswara Reddy\nRedSorm Team\nrajeswarareddy254@gmail.com"
+  },
+  "quality_filters": {
+    "min_rating": 3.0,
+    "min_reviews": 5,
+    "require_phone": true,
+    "strict_phone_validation": true,
+    "deep_research_mode": true
+  }
+}
