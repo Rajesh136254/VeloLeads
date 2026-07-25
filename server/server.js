@@ -11,8 +11,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Setup Razorpay
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_live_Smx543I5qdjylC';
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'l0xB3OVy4uo2cbjmtl9MrO2t';
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+
+if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+  console.error("FATAL ERROR: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables are required.");
+  process.exit(1);
+}
 
 const razorpay = new Razorpay({
   key_id: RAZORPAY_KEY_ID,
