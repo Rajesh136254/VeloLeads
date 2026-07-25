@@ -37,7 +37,7 @@ def get_machine_id():
             return "fallback_machine_id_12345"
 
 def get_api_url():
-    """Reads licensing API URL from config.json, with localhost fallback."""
+    """Reads licensing API URL from config.json, with production fallback."""
     try:
         if getattr(sys, "frozen", False):
             config_path = os.path.join(os.path.dirname(sys.executable), "config.json")
@@ -47,10 +47,10 @@ def get_api_url():
         if os.path.exists(config_path):
             with open(config_path, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
-                return cfg.get("licensing_api_url", "http://localhost:5000")
+                return cfg.get("licensing_api_url", "https://veloleads.redsorm.in")
     except Exception:
         pass
-    return "http://localhost:5000"
+    return "https://veloleads.redsorm.in"
 
 
 def install_browsers(log_callback):

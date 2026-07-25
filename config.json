@@ -1,5 +1,5 @@
 {
-  "licensing_api_url": "http://localhost:5000",
+  "licensing_api_url": "https://veloleads.redsorm.in",
   "search": {
     "cities": [
       "Hyderabad",
