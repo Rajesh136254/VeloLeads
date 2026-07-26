@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     name: Build Windows EXE
@@ -67,3 +70,39 @@ jobs:
         with:
           name: VeloLeads-macOS-App
           path: dist/VeloLeads-macOS.zip
+
+  deploy-assets:
+    name: Commit Executables to Render Public Directory
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Windows EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: VeloLeads-Windows-EXE
+          path: build-artifacts
+
+      - name: Download macOS App
+        uses: actions/download-artifact@v4
+        with:
+          name: VeloLeads-macOS-App
+          path: build-artifacts
+
+      - name: Prepare Download Directory
+        run: |
+          mkdir -p server/public/downloads
+          cp build-artifacts/VeloLeads.exe server/public/downloads/VeloLeads-Windows.exe
+          cp build-artifacts/VeloLeads-macOS.zip server/public/downloads/VeloLeads-macOS.zip
+
+      - name: Commit and Push to Private Repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/public/downloads/VeloLeads-Windows.exe server/public/downloads/VeloLeads-macOS.zip
+          git commit -m "Auto-update compiled executables [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref }}
