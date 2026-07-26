@@ -8,3 +8,4 @@ customtkinter
 pandas
 openpyxl
 pyinstaller
+Pillow>=10.0.0
