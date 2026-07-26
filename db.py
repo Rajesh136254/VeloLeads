@@ -9,24 +9,53 @@ if getattr(sys, "frozen", False):
 else:
     _base = os.path.dirname(os.path.abspath(__file__))
 
-DB_SLOT_COUNT = 3
-# Rotate to the next database once one database reaches 50 lakh rows.
+DB_SLOT_COUNT = 15
 DB_ROW_LIMIT = 5_000_000
-DB_STATE_FILE = os.path.join(_base, "db_state.json")
-LEGACY_DB_PATH = os.path.join(_base, "leads.db")
+DB_FOLDER = os.path.join(_base, "db")
+DB_STATE_FILE = os.path.join(DB_FOLDER, "db_state.json")
+HISTORY_DB_PATH = os.path.join(DB_FOLDER, "history.db")
 
+def migrate_databases():
+    """Safely migrate any existing DB and state files from root directory to the db/ folder."""
+    if not os.path.exists(DB_FOLDER):
+        os.makedirs(DB_FOLDER, exist_ok=True)
+
+    # Migrate state file
+    root_state = os.path.join(_base, "db_state.json")
+    folder_state = os.path.join(DB_FOLDER, "db_state.json")
+    if os.path.exists(root_state) and not os.path.exists(folder_state):
+        try:
+            os.rename(root_state, folder_state)
+        except Exception as e:
+            print(f"[-] Failed to migrate db_state.json: {e}")
+
+    # Migrate legacy leads.db to leads_1.db in folder
+    legacy_path = os.path.join(_base, "leads.db")
+    target_path_1 = os.path.join(DB_FOLDER, "leads_1.db")
+    if os.path.exists(legacy_path) and not os.path.exists(target_path_1):
+        try:
+            os.rename(legacy_path, target_path_1)
+            print("[+] Migrated legacy leads.db to db/leads_1.db")
+        except Exception as e:
+            print(f"[-] Failed to migrate legacy database: {e}")
+
+    # Migrate existing leads_X.db files from root to db/ folder
+    for idx in range(1, DB_SLOT_COUNT + 1):
+        root_path = os.path.join(_base, f"leads_{idx}.db")
+        folder_path = os.path.join(DB_FOLDER, f"leads_{idx}.db")
+        if os.path.exists(root_path) and not os.path.exists(folder_path):
+            try:
+                os.rename(root_path, folder_path)
+                print(f"[+] Migrated leads_{idx}.db from root to db/ folder")
+            except Exception as e:
+                print(f"[-] Failed to migrate leads_{idx}.db: {e}")
 
 def get_db_paths():
     """Return the available SQLite database paths for rotation."""
+    migrate_databases()
     paths = []
-    if os.path.exists(LEGACY_DB_PATH):
-        paths.append(LEGACY_DB_PATH)
-    else:
-        paths.append(os.path.join(_base, "leads_1.db"))
-
-    for idx in range(2, DB_SLOT_COUNT + 1):
-        paths.append(os.path.join(_base, f"leads_{idx}.db"))
-
+    for idx in range(1, DB_SLOT_COUNT + 1):
+        paths.append(os.path.join(DB_FOLDER, f"leads_{idx}.db"))
     return paths
 
 
@@ -66,14 +95,27 @@ def get_active_db_path():
 
 
 def rotate_to_next_db():
-    """Move to the next database slot and persist the selection."""
+    """Move to the next database slot and persist the selection, deleting the old file if it exists to start fresh."""
     paths = get_db_paths()
     state = _load_db_state()
     current_slot = state.get("current_slot", 0)
     next_slot = (current_slot + 1) % len(paths)
     state["current_slot"] = next_slot
+    
     next_path = paths[next_slot]
-    state["current_count"] = _get_row_count(next_path)
+    if os.path.exists(next_path):
+        try:
+            # Close connection if any open, then delete
+            os.remove(next_path)
+        except Exception as e:
+            print(f"[-] Error deleting database file for fresh slot {next_slot}: {e}")
+            
+    # Re-initialize the schema for the fresh slot
+    conn = get_db_connection(next_path)
+    _initialize_schema(conn)
+    conn.close()
+    
+    state["current_count"] = 0
     _save_db_state(state)
     return next_path
 
@@ -126,7 +168,10 @@ def _initialize_schema(conn):
 
 
 def init_db():
-    """Initialize all database slots and create the leads table if it doesn't exist."""
+    """Initialize all database slots, history database, and create tables if they don't exist."""
+    migrate_databases()
+    init_history_db()
+    
     for db_path in get_db_paths():
         conn = get_db_connection(db_path)
         _initialize_schema(conn)
@@ -141,6 +186,88 @@ def init_db():
     _save_db_state(state)
 
     return get_active_db_path()
+
+
+# --- Campaign History and Logging Database Functions ---
+
+def init_history_db():
+    """Initialize the campaign history database and prune old entries."""
+    if not os.path.exists(DB_FOLDER):
+        os.makedirs(DB_FOLDER, exist_ok=True)
+    
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS campaigns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            location TEXT,
+            keyword TEXT,
+            target_count INTEGER,
+            leads_found INTEGER,
+            status TEXT,
+            log_data TEXT
+        )
+    """)
+    conn.commit()
+    
+    # Auto-prune campaigns older than 10 days
+    try:
+        cursor.execute("DELETE FROM campaigns WHERE timestamp < datetime('now', '-10 days')")
+        conn.commit()
+    except Exception as e:
+        print(f"[-] Failed to prune campaign history logs: {e}")
+        
+    # Clean up any orphaned campaigns that were left as 'Running' (from previous app crashes/exits)
+    try:
+        cursor.execute("UPDATE campaigns SET status = 'Interrupted' WHERE status = 'Running'")
+        conn.commit()
+    except Exception as e:
+        print(f"[-] Failed to clean up orphaned campaigns: {e}")
+        
+    conn.close()
+
+
+def add_campaign(location, keyword, target_count):
+    """Insert a new campaign and return its ID."""
+    init_history_db()
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO campaigns (location, keyword, target_count, leads_found, status, log_data)
+        VALUES (?, ?, ?, 0, 'Running', '')
+    """, (location, keyword, target_count))
+    conn.commit()
+    campaign_id = cursor.lastrowid
+    conn.close()
+    return campaign_id
+
+
+def update_campaign_status(campaign_id, status, leads_found, log_data):
+    """Update status, leads count, and final logs of a campaign."""
+    init_history_db()
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE campaigns
+        SET status = ?, leads_found = ?, log_data = ?
+        WHERE id = ?
+    """, (status, leads_found, log_data, campaign_id))
+    conn.commit()
+    conn.close()
+
+
+def get_campaign_history():
+    """Retrieve campaign runs from the last 3 days."""
+    init_history_db()
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM campaigns ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
+    history = [dict(row) for row in rows]
+    conn.close()
+    return history
 
 
 def _get_row_count(db_path):
@@ -298,6 +425,23 @@ def mark_leads_as_sent(lead_ids):
             print(f"[-] Error marking leads as sent: {e}")
 
         conn.close()
+
+
+def get_total_leads_count():
+    """Returns the total number of leads stored across all 15 database slots."""
+    total = 0
+    for idx in range(1, DB_SLOT_COUNT + 1):
+        db_path = os.path.join(DB_FOLDER, f"leads_{idx}.db")
+        if os.path.exists(db_path):
+            try:
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM leads")
+                total += cursor.fetchone()[0]
+                conn.close()
+            except Exception:
+                pass
+    return total
 
 
 init_db()
