@@ -219,6 +219,7 @@ async function activateLicense(usernameOrEmail, licenseKey, machineId) {
   return { 
     success: true, 
     username: sub.username, 
+    email: sub.email,
     expires_at: sub.expires_at,
     message: 'License activated successfully.' 
   };
@@ -247,6 +248,7 @@ async function verifyLicense(usernameOrEmail, licenseKey, machineId) {
   return { 
     success: true, 
     username: sub.username, 
+    email: sub.email,
     expires_at: sub.expires_at,
     message: 'License is valid.' 
   };

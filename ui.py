@@ -237,6 +237,9 @@ class App(ctk.CTk):
                 if res.status_code == 200 and data.get("success"):
                     lic["expires_at"] = data.get("expires_at", expires_at_str)
                     self.license_expires_at = lic["expires_at"]
+                    if "email" in data:
+                        lic["email"] = data["email"]
+                        self.license_email = data["email"]
                     with open(self.license_path, "w", encoding="utf-8") as f:
                         json.dump(lic, f, indent=4)
                     log_debug("Local license verified successfully online. Going to main UI.")
@@ -361,7 +364,7 @@ class App(ctk.CTk):
             if res.status_code == 200 and data.get("success"):
                 license_data = {
                     "username": data.get("username", username),
-                    "email": data.get("email", username), 
+                    "email": data.get("email", username if "@" in username else ""), 
                     "license_key": license_key,
                     "expires_at": data.get("expires_at")
                 }
@@ -835,7 +838,7 @@ class App(ctk.CTk):
         # View Reports link button
         btn_view_rep = ctk.CTkButton(
             self.card_scraped,
-            text="View Reports  →",
+            text="View latest report  →",
             font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
             fg_color="transparent",
             text_color=ACCENT_GREEN,

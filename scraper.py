@@ -562,8 +562,27 @@ def scrape_leads_for_query(query, city, target_new_leads, max_scrolls=5, ui_log_
                 link.click()
                 # Wait for the detail panel main section to render
                 page.wait_for_selector('div[role="main"]', timeout=8000)
-                # Short sleep to let animations finish and content load
-                time.sleep(1.5)
+                
+                # Wait for the title of the business in the detail panel to match the current lead name
+                # This guarantees that the panel has refreshed and we aren't reading the previous lead's data!
+                title_loaded = False
+                for _ in range(25): # Wait up to 5 seconds
+                    try:
+                        title_elem = page.locator('div[role="main"] h1').first
+                        if title_elem.is_visible():
+                            current_title = title_elem.inner_text().strip()
+                            if name in current_title or current_title in name:
+                                title_loaded = True
+                                break
+                    except Exception:
+                        pass
+                    time.sleep(0.2)
+                
+                if not title_loaded:
+                    log_msg(f"   [~] Warning: Detail panel title did not update to '{name}'. Proceeding anyway.", ui_log_callback)
+                else:
+                    # Let final layout elements render
+                    time.sleep(0.5)
             except Exception as click_err:
                 log_msg(f"[!] Error clicking lead '{name}': {click_err}", ui_log_callback)
                 continue
