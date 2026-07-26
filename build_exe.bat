@@ -25,7 +25,7 @@ if exist dist (
 mkdir dist
 
 echo Running PyInstaller...
-pyinstaller --noconfirm --clean --onefile --windowed --name "VeloLeads" "ui.py"
+pyinstaller --noconfirm --clean --onefile --windowed --icon="icon.ico" --add-data "icon.ico;." --name "VeloLeads" "ui.py"
 
 if errorlevel 1 (
     echo.

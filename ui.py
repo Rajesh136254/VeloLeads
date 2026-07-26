@@ -134,6 +134,27 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # 1. Configure Windows taskbar icon grouping to show our custom icon instead of Python's default
+        if sys.platform == "win32":
+            import ctypes
+            try:
+                myappid = "com.veloleads.app.1.0.0"
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            except Exception:
+                pass
+
+        # 2. Set Custom Window & Taskbar Icon
+        if getattr(sys, "frozen", False):
+            icon_path = os.path.join(sys._MEIPASS, "icon.ico")
+        else:
+            icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico")
+            
+        if os.path.exists(icon_path):
+            try:
+                self.iconbitmap(icon_path)
+            except Exception:
+                pass
+
         self.title("VeloLeads - Automated AI Lead Generator")
         self.geometry("1150x760")
         self.configure(fg_color=BG_COLOR)
@@ -228,8 +249,9 @@ class App(ctk.CTk):
             }
             log_debug(f"Verifying local license online: {api_url}/api/license/verify")
 
+            self.after(0, lambda: self.loading_lbl.configure(text="Verifying license... (Waking up server, please wait)"))
             try:
-                res = requests.post(f"{api_url}/api/license/verify", json=payload, timeout=6)
+                res = requests.post(f"{api_url}/api/license/verify", json=payload, timeout=60)
                 log_debug(f"Verify response status: {res.status_code}")
                 log_debug(f"Verify response raw text: {res.text}")
                 data = res.json()
@@ -330,12 +352,12 @@ class App(ctk.CTk):
 
         log_debug(f"Attempting activation with username: '{username}' and key: '{license_key}'")
         if not username or not license_key:
-            self.login_error_label.configure(text="Please fill in both username and license key.")
+            self.login_error_label.configure(text="Please fill in both username and license key.", text_color="#EF4444")
             return
 
         self.login_submit_btn.configure(state="disabled", text="ACTIVATING...")
         self.login_buy_btn.configure(state="disabled")
-        self.login_error_label.configure(text="")
+        self.login_error_label.configure(text="Connecting... (Waking up server, please wait up to 1 min)", text_color="#16A34A")
 
         threading.Thread(target=self.run_activation, args=(username, license_key), daemon=True).start()
 
@@ -354,7 +376,7 @@ class App(ctk.CTk):
             target_url = f"{api_url}/api/license/activate"
             log_debug(f"Sending POST to {target_url}...")
             
-            res = requests.post(target_url, json=payload, timeout=10)
+            res = requests.post(target_url, json=payload, timeout=60)
             log_debug(f"Response status code: {res.status_code}")
             log_debug(f"Response raw text: {res.text}")
             
@@ -398,12 +420,37 @@ class App(ctk.CTk):
     def activation_failed(self, message):
         self.login_submit_btn.configure(state="normal", text="ACTIVATE")
         self.login_buy_btn.configure(state="normal")
-        self.login_error_label.configure(text=message)
+        self.login_error_label.configure(text=message, text_color="#EF4444")
 
     def renew_plan(self):
         """Opens renewal page in browser with prefilled username/email parameters."""
         api_url = get_api_url()
         webbrowser.open(f"{api_url}?renew={self.license_username}&email={self.license_email}")
+
+    def logout_account(self):
+        """Logs out from the active account, deletes local license cache, and redirects to login."""
+        log_debug("logout_account called. Deleting license_info.json and redirecting to login...")
+        
+        # 1. Delete local license cache
+        if os.path.exists(self.license_path):
+            try:
+                os.remove(self.license_path)
+                log_debug("Successfully deleted license_info.json")
+            except Exception as e:
+                log_debug(f"Failed to delete license_info.json: {e}")
+        
+        # 2. Reset runtime variables
+        self.license_username = ""
+        self.license_email = ""
+        self.license_expires_at = ""
+        
+        # 3. Destroy main UI and show login screen
+        for widget in self.winfo_children():
+            widget.destroy()
+        
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.setup_login_ui()
 
     def setup_main_ui(self):
         # Configure layout for Main SPA Screen (Sidebar + Dynamic content pane)
@@ -492,7 +539,21 @@ class App(ctk.CTk):
             text_color=ACCENT_GREEN,
             command=self.renew_plan
         )
-        self.sub_btn.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="ew")
+        self.sub_btn.grid(row=2, column=0, padx=12, pady=(0, 6), sticky="ew")
+
+        self.logout_btn = ctk.CTkButton(
+            self.sub_card,
+            text="Log Out",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            height=28,
+            fg_color="transparent",
+            hover_color="#FADBD8",
+            text_color="#C0392B",
+            border_width=1,
+            border_color="#F5B7B1",
+            command=self.logout_account
+        )
+        self.logout_btn.grid(row=3, column=0, padx=12, pady=(0, 12), sticky="ew")
 
         # Need Help Support Section
         self.support_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
@@ -924,15 +985,15 @@ class App(ctk.CTk):
         if not settings:
             return
 
-        if "locations" in settings:
+        if settings.get("locations"):
             self.loc_entry.insert(0, settings["locations"])
-        if "keywords" in settings:
+        if settings.get("keywords"):
             self.kw_entry.insert(0, settings["keywords"])
-        if "description" in settings:
+        if settings.get("description"):
             self.desc_entry.insert(0, settings["description"])
-        if "emails" in settings:
+        if settings.get("emails"):
             self.email_entry.insert(0, settings["emails"])
-        if "target" in settings:
+        if settings.get("target") is not None and str(settings["target"]).strip() != "":
             self.leads_entry.insert(0, str(settings["target"]))
         if "schedule_enabled" in settings and settings["schedule_enabled"]:
             self.schedule_switch.select()
@@ -941,9 +1002,9 @@ class App(ctk.CTk):
         if not schedule_times and "schedule_time" in settings:
             schedule_times = [settings["schedule_time"]]
         
-        if schedule_times:
-            # First one goes into the visible form
-            self.schedule_time_entries[0].insert(0, str(schedule_times[0]))
+        for idx, time_val in enumerate(schedule_times):
+            if idx < len(self.schedule_time_entries) and str(time_val).strip() != "":
+                self.schedule_time_entries[idx].insert(0, str(time_val))
 
     # --- 3. HISTORY VIEW ---
     def setup_history_view(self):

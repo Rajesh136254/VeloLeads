@@ -26,7 +26,7 @@ jobs:
 
       - name: Build Windows EXE
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name "VeloLeads" ui.py
+          pyinstaller --noconfirm --clean --onefile --windowed --icon="icon.ico" --add-data "icon.ico;." --name "VeloLeads" ui.py
 
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
@@ -54,7 +54,7 @@ jobs:
 
       - name: Build macOS App
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name "VeloLeads" ui.py
+          pyinstaller --noconfirm --clean --onefile --windowed --icon="icon.ico" --add-data "icon.ico:." --name "VeloLeads" ui.py
           cd dist
           if [ -d "VeloLeads.app" ]; then
             zip -r "VeloLeads-macOS.zip" "VeloLeads.app"
