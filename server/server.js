@@ -93,7 +93,7 @@ app.post('/api/payment/create-order', async (req, res) => {
       }
     }
 
-    const amount = 1; // Amount in INR
+    const amount = 828; // Amount in INR (69 rupees/month * 12 months)
     const options = {
       amount: Math.round(amount * 100), // in paise
       currency: 'INR',
