@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VeloLeads - Premium Automated AI Lead Scraper & Email Delivery Suite</title>
-  <meta name="description" content="Extract, filter, and email B2B leads from Google Maps automatically. Includes AI-powered qualification, automated email reports, and daily campaign scheduling. Get lifetime scale for ₹1/year.">
+  <meta name="description" content="Extract, filter, and email leads from Google Maps automatically. Includes AI-powered qualification, automated email reports, and daily campaign scheduling. Get lifetime scale for ₹1/year.">
   
   <!-- Google Fonts: Outfit (headings) & Inter (body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -861,7 +861,7 @@
         <i class="fa-solid fa-wand-magic-sparkles"></i>
         <span>Playwright Engine + Smart Lead Qualification</span>
       </div>
-      <h1>Scrape Unlimited B2B Leads. Delivered to Your Inbox.</h1>
+      <h1>Scrape Unlimited Leads. Delivered to Your Inbox.</h1>
       <p>A zero-limits standalone client that scrapes local businesses, extracts verified emails/phone numbers, qualifies them with AI descriptions, and schedules runs automatically.</p>
       
       <div class="hero-ctas">
@@ -914,7 +914,7 @@
     <div class="container">
       <div class="section-title">
         <h2>Unmatched Leads Extraction Power</h2>
-        <p>Everything you need to automate local outreach and build massive B2B databases.</p>
+        <p>Everything you need to automate local outreach and build massive business databases.</p>
       </div>
 
       <div class="features-grid">
@@ -959,8 +959,8 @@
           <div class="feature-icon">
             <i class="fa-solid fa-database"></i>
           </div>
-          <h3>Smart DB Rotation</h3>
-          <p>Rotates automatically between 3 active SQLite database slots once a database reaches 50 Lakh rows. Supports massive 1.5 Crore scale.</p>
+          <h3>Secure Database</h3>
+          <p>Maintains your scraped leads securely in a local database, preventing duplicates and ensuring high-speed data retrieval.</p>
         </div>
 
         <!-- Feature 6 -->
@@ -1023,7 +1023,7 @@
           <li><i class="fa-solid fa-check"></i> <span>Daily Campaign Auto-Scheduler</span></li>
           <li><i class="fa-solid fa-check"></i> <span>AI Filters & Lead Qualification</span></li>
           <li><i class="fa-solid fa-check"></i> <span>Hardware-Locked Anti-Sharing license</span></li>
-          <li><i class="fa-solid fa-check"></i> <span>Windows (.exe) & macOS (.app) downloads</span></li>
+          <li><i class="fa-solid fa-check"></i> <span>Windows (.exe) & macOS (Coming Soon)</span></li>
         </ul>
 
         <button onclick="openPurchaseModal()" class="btn btn-primary" style="width: 100%; padding: 1.1rem; font-size: 1rem; border-radius: 12px;">
@@ -1093,9 +1093,9 @@
             <i class="fa-brands fa-windows" style="color: #00a4ef;"></i>
             <span>Windows (.zip)</span>
           </a>
-          <a href="https://docs.google.com/uc?export=download&id=1iqXzei-fgtE2RuRRMVRhkfgxjFGdDCuJ" class="btn btn-secondary" target="_blank">
-            <i class="fa-brands fa-apple" style="color: #ffffff;"></i>
-            <span>macOS (.zip)</span>
+          <a href="javascript:void(0)" class="btn btn-secondary" style="opacity: 0.6; cursor: not-allowed;" onclick="alert('macOS version is currently under maintenance and will be available in a few days!')">
+            <i class="fa-brands fa-apple" style="color: #64748b;"></i>
+            <span>macOS (Coming Soon)</span>
           </a>
         </div>
       </div>
@@ -1279,8 +1279,72 @@
       }
     }
 
-    // Auto-check url parameters for renewals
+    // Waking up server check
+    async function wakeUpServer() {
+      const overlay = document.getElementById('api-wakeup-overlay');
+      const progressBar = document.getElementById('wakeup-progress-bar');
+      const statusText = document.getElementById('wakeup-status-text');
+      
+      let isSleeping = true;
+      let progress = 5;
+      let progressInterval;
+
+      // Start pinging
+      const controller = new AbortController();
+      
+      // We check if server responds instantly. If it doesn't respond in 800ms, show the overlay.
+      const timeoutId = setTimeout(() => {
+        if (isSleeping) {
+          overlay.style.visibility = 'visible';
+          overlay.style.opacity = '1';
+          
+          // Start simulated progress animation
+          progressInterval = setInterval(() => {
+            if (progress < 90) {
+              progress += (90 - progress) * 0.08; // Asymptotically approach 90%
+              progressBar.style.width = `${Math.round(progress)}%`;
+              if (progress > 40) {
+                statusText.textContent = "Waking up services...";
+              }
+              if (progress > 70) {
+                statusText.textContent = "Almost ready...";
+              }
+            }
+          }, 1500);
+        }
+      }, 800);
+
+      try {
+        const res = await fetch('/api/ping', { signal: controller.signal });
+        isSleeping = false;
+        clearTimeout(timeoutId);
+        if (progressInterval) clearInterval(progressInterval);
+        
+        // Success animation
+        progressBar.style.width = '100%';
+        statusText.textContent = "Connected!";
+        statusText.style.color = '#10B981'; // Emerald Green
+        progressBar.style.background = '#10B981';
+      } catch (err) {
+        console.log("Server wake up status: ", err);
+        isSleeping = false;
+        clearTimeout(timeoutId);
+        if (progressInterval) clearInterval(progressInterval);
+      } finally {
+        // Fade out overlay
+        setTimeout(() => {
+          overlay.style.opacity = '0';
+          setTimeout(() => {
+            overlay.style.visibility = 'hidden';
+          }, 400);
+        }, 800);
+      }
+    }
+
+    // Auto-check url parameters for renewals and wake up server
     window.addEventListener('DOMContentLoaded', () => {
+      wakeUpServer();
+
       const params = new URLSearchParams(window.location.search);
       const renewUser = params.get('renew');
       if (renewUser) {
@@ -1288,5 +1352,32 @@
       }
     });
   </script>
+
+  <!-- Server Wake-Up Loader Overlay -->
+  <div id="api-wakeup-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; transition: opacity 0.4s ease, visibility 0.4s ease; opacity: 0; visibility: hidden;">
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); padding: 40px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; align-items: center; max-width: 420px; width: 90%; text-align: center;">
+      <!-- Glowing Spinner -->
+      <div class="glow-spinner" style="width: 60px; height: 60px; border: 4px solid rgba(13, 148, 136, 0.1); border-top: 4px solid #0d9488; border-radius: 50%; animation: spin-loader 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; margin-bottom: 25px; box-shadow: 0 0 15px rgba(13, 148, 136, 0.2);"></div>
+      
+      <h3 style="margin: 0 0 12px 0; font-size: 1.35rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.025em;">Connecting to Licensing Server</h3>
+      <p style="margin: 0 0 20px 0; font-size: 0.9rem; color: #94a3b8; line-height: 1.6;">
+        The licensing server is waking up after a period of inactivity. This process typically takes about 40-50 seconds on Render's free hosting.
+      </p>
+      
+      <!-- Progress Track Bar -->
+      <div style="width: 100%; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-bottom: 10px;">
+        <div id="wakeup-progress-bar" style="width: 5%; height: 100%; background: linear-gradient(90deg, #0d9488, #2dd4bf); border-radius: 3px; transition: width 0.4s ease, background 0.4s ease;"></div>
+      </div>
+      <span id="wakeup-status-text" style="font-size: 0.75rem; color: #0d9488; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Connecting...</span>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin-loader {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </body>
 </html>
+

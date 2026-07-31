@@ -15,6 +15,14 @@ echo "Installing/Updating requirements..."
 pip install -r requirements.txt
 playwright install chromium
 
+echo "Generating User Guide PDF..."
+python generate_pdf.py
+
+if [ $? -ne 0 ]; then
+    echo "PDF generation failed."
+    exit 1
+fi
+
 echo "Running PyInstaller for macOS..."
 pyinstaller --noconfirm --clean --onefile --windowed --name "VeloLeads" ui.py
 
@@ -25,11 +33,12 @@ fi
 
 # Package into a zip for easy distribution on macOS
 echo "Packaging macOS build..."
+cp VeloLeads_User_Guide.pdf dist/
 cd dist
 if [ -d "VeloLeads.app" ]; then
-    zip -r "VeloLeads-macOS.zip" "VeloLeads.app"
+    zip -r "VeloLeads-macOS.zip" "VeloLeads.app" "VeloLeads_User_Guide.pdf"
 elif [ -f "VeloLeads" ]; then
-    zip "VeloLeads-macOS.zip" "VeloLeads"
+    zip "VeloLeads-macOS.zip" "VeloLeads" "VeloLeads_User_Guide.pdf"
 fi
 cd ..
 
@@ -38,5 +47,6 @@ echo "========================================================"
 echo "macOS Build Complete!"
 echo "Find your Mac release in the 'dist' folder:"
 echo " - dist/VeloLeads.app (Double-clickable Mac Application)"
-echo " - dist/VeloLeads-macOS.zip (Mac Distribution Zip)"
+echo " - dist/VeloLeads-macOS.zip (Contains VeloLeads.app and VeloLeads_User_Guide.pdf)"
 echo "========================================================"
+

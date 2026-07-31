@@ -39,6 +39,11 @@ function generateLicenseKey() {
   return `VELO-${part()}-${part()}-${part()}-${part()}`;
 }
 
+// API: Ping to wake up server
+app.get('/api/ping', (req, res) => {
+  res.json({ success: true, status: 'online' });
+});
+
 // API: Check if username or email is valid and unique
 app.post('/api/check-user', async (req, res) => {
   try {

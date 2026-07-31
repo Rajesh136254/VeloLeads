@@ -24,15 +24,19 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
 
+      - name: Generate User Guide PDF
+        run: python generate_pdf.py
+
       - name: Build Windows EXE
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed --icon="icon.ico" --add-data "icon.ico;." --name "VeloLeads" ui.py
+          powershell Compress-Archive -Path dist/VeloLeads.exe, VeloLeads_User_Guide.pdf -DestinationPath dist/VeloLeads-Windows-EXE.zip -Force
 
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
         with:
           name: VeloLeads-Windows-EXE
-          path: dist/VeloLeads.exe
+          path: dist/VeloLeads-Windows-EXE.zip
 
   build-mac:
     name: Build macOS App
@@ -52,14 +56,18 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
 
+      - name: Generate User Guide PDF
+        run: python generate_pdf.py
+
       - name: Build macOS App
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed --icon="icon.ico" --add-data "icon.ico:." --name "VeloLeads" ui.py
+          cp VeloLeads_User_Guide.pdf dist/
           cd dist
           if [ -d "VeloLeads.app" ]; then
-            zip -r "VeloLeads-macOS.zip" "VeloLeads.app"
+            zip -r "VeloLeads-macOS.zip" "VeloLeads.app" "VeloLeads_User_Guide.pdf"
           else
-            zip "VeloLeads-macOS.zip" "VeloLeads"
+            zip "VeloLeads-macOS.zip" "VeloLeads" "VeloLeads_User_Guide.pdf"
           fi
 
       - name: Upload macOS App Artifact
@@ -67,3 +75,4 @@ jobs:
         with:
           name: VeloLeads-macOS-App
           path: dist/VeloLeads-macOS.zip
+
