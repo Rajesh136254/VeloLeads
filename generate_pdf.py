@@ -217,7 +217,7 @@ def create_user_guide(output_path="VeloLeads_User_Guide.pdf"):
     ))
     story.append(Paragraph("• <b>Extract files</b>: Extract the contents of the ZIP folder onto your computer.", bullet_style))
     story.append(Paragraph("• <b>Run the App (Windows)</b>: Double-click the <b>VeloLeads.exe</b> file to start the application.", bullet_style))
-    story.append(Paragraph("• <b>macOS Support</b>: Under maintenance, <b>coming soon in a few days</b>.", bullet_style))
+    story.append(Paragraph("• <b>Run the App (macOS)</b>: Double-click the <b>VeloLeads.app</b> file to start the application.", bullet_style))
     story.append(Paragraph("• <b>Auto-Setup</b>: On the first launch, the app automatically configures itself and installs background browser dependencies. This requires an active internet connection and takes about 30 seconds.", bullet_style))
 
     story.append(Paragraph("2. Activation & Licensing", h1_style))
