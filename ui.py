@@ -176,6 +176,7 @@ class App(ctk.CTk):
             self.license_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "license_info.json")
 
         self.license_username = ""
+        self.license_key = ""
         self.license_email = ""
         self.license_expires_at = ""
 
@@ -236,6 +237,7 @@ class App(ctk.CTk):
                 return
 
             self.license_username = username
+            self.license_key = license_key
             self.license_email = lic.get("email", username)
             self.license_expires_at = expires_at_str
 
@@ -397,6 +399,7 @@ class App(ctk.CTk):
                 log_debug("Successfully wrote license_info.json")
 
                 self.license_username = license_data["username"]
+                self.license_key = license_key
                 self.license_email = license_data["email"]
                 self.license_expires_at = license_data["expires_at"]
 
@@ -429,9 +432,31 @@ class App(ctk.CTk):
 
     def logout_account(self):
         """Logs out from the active account, deletes local license cache, and redirects to login."""
-        log_debug("logout_account called. Deleting license_info.json and redirecting to login...")
+        log_debug("logout_account called. Clearing machine_id on server and deleting local license...")
         
-        # 1. Delete local license cache
+        # 1. Notify server of logout to unbind machine_id (in background thread so GUI doesn't freeze)
+        def run_logout_api(username, license_key, machine_id):
+            if username and license_key:
+                try:
+                    api_url = get_api_url()
+                    payload = {
+                        "username": username,
+                        "license_key": license_key,
+                        "machine_id": machine_id
+                    }
+                    log_debug(f"Sending logout to server: {api_url}/api/license/logout")
+                    requests.post(f"{api_url}/api/license/logout", json=payload, timeout=5)
+                except Exception as e:
+                    log_debug(f"Server logout request failed: {e}")
+
+        # Start the background API logout request
+        threading.Thread(
+            target=run_logout_api, 
+            args=(self.license_username, self.license_key, get_machine_id()), 
+            daemon=True
+        ).start()
+
+        # 2. Delete local license cache
         if os.path.exists(self.license_path):
             try:
                 os.remove(self.license_path)
@@ -439,12 +464,13 @@ class App(ctk.CTk):
             except Exception as e:
                 log_debug(f"Failed to delete license_info.json: {e}")
         
-        # 2. Reset runtime variables
+        # 3. Reset runtime variables
         self.license_username = ""
+        self.license_key = ""
         self.license_email = ""
         self.license_expires_at = ""
         
-        # 3. Destroy main UI and show login screen
+        # 4. Destroy main UI and show login screen
         for widget in self.winfo_children():
             widget.destroy()
         

@@ -216,6 +216,23 @@ app.post('/api/license/verify', async (req, res) => {
   }
 });
 
+// API: Desktop Client License Logout (Deactivates machine ID)
+app.post('/api/license/logout', async (req, res) => {
+  try {
+    const { username, license_key, machine_id } = req.body;
+
+    if (!username || !license_key || !machine_id) {
+      return res.status(400).json({ success: false, message: 'Username, license key, and machine ID are required.' });
+    }
+
+    const result = await db.logoutLicense(username, license_key, machine_id);
+    res.json(result);
+  } catch (error) {
+    console.error('License logout error:', error);
+    res.status(500).json({ success: false, message: 'Server error during logout.' });
+  }
+});
+
 // Route: Download zip files from workspace root
 app.get('/download/:filename', (req, res) => {
   const filename = req.params.filename;

@@ -200,14 +200,15 @@ async function activateLicense(usernameOrEmail, licenseKey, machineId) {
     return { success: false, message: 'Subscription has expired.' };
   }
 
-  if (sub.machine_id && sub.machine_id !== machineId) {
-    return { 
-      success: false, 
-      message: 'This license is already registered on another computer. Please contact support to reset it.' 
-    };
-  }
-
-  if (!sub.machine_id) {
+  // Always update machine_id to the most recently logging-in machine
+  if (usePostgres) {
+    const sql = `
+      UPDATE subscriptions 
+      SET machine_id = $1
+      WHERE id = $2
+    `;
+    await pgPool.query(sql, [machineId, sub.id]);
+  } else {
     const sql = `
       UPDATE subscriptions 
       SET machine_id = ?
@@ -254,11 +255,49 @@ async function verifyLicense(usernameOrEmail, licenseKey, machineId) {
   };
 }
 
+async function logoutLicense(usernameOrEmail, licenseKey, machineId) {
+  const sub = await getSubscription(usernameOrEmail);
+  if (!sub) {
+    return { success: false, message: 'Subscription not found.' };
+  }
+
+  if (sub.license_key !== licenseKey) {
+    return { success: false, message: 'Invalid license key.' };
+  }
+
+  if (sub.machine_id && sub.machine_id !== machineId) {
+    return { success: false, message: 'License key mismatch for this hardware.' };
+  }
+
+  // Clear the machine_id field in database to allow binding to another system
+  if (usePostgres) {
+    const sql = `
+      UPDATE subscriptions 
+      SET machine_id = NULL
+      WHERE id = $1
+    `;
+    await pgPool.query(sql, [sub.id]);
+  } else {
+    const sql = `
+      UPDATE subscriptions 
+      SET machine_id = NULL
+      WHERE id = ?
+    `;
+    await run(sql, [sub.id]);
+  }
+
+  return { 
+    success: true, 
+    message: 'License logged out successfully. You can now log in from another computer.' 
+  };
+}
+
 module.exports = {
   getSubscription,
   getSubscriptionByLicense,
   createSubscription,
   renewSubscription,
   activateLicense,
-  verifyLicense
+  verifyLicense,
+  logoutLicense
 };
