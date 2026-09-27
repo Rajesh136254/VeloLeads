@@ -42,7 +42,14 @@ if errorlevel 1 (
 )
 
 echo Running PyInstaller...
-%PYINSTALLER_EXE% --noconfirm --clean --onefile --windowed --icon="icon.ico" --add-data "icon.ico;." --name "VeloLeads" "ui.py"
+for /f "delims=" %%i in ('%PYTHON_EXE% -c "import sys; print(sys.base_prefix)"') do set "BASE_PYTHON=%%i"
+for /d %%d in ("%BASE_PYTHON%\tcl\tcl8.*") do set "TCL_LIBRARY=%%d"
+for /d %%d in ("%BASE_PYTHON%\tcl\tk8.*") do set "TK_LIBRARY=%%d"
+
+echo TCL_LIBRARY is set to: %TCL_LIBRARY%
+echo TK_LIBRARY is set to: %TK_LIBRARY%
+
+%PYINSTALLER_EXE% --noconfirm --clean --onefile --windowed --icon="icon.ico" --add-data "icon.ico;." --hidden-import=tkinter --hidden-import=tkinter.filedialog --name "VeloLeads" "ui.py"
 
 if errorlevel 1 (
     echo.

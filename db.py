@@ -146,21 +146,37 @@ def _initialize_schema(conn):
             scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             sent_at DATETIME,
             contact_person TEXT,
-            establishment_size TEXT
+            establishment_size TEXT,
+            linkedin_url TEXT,
+            matched_snippet TEXT,
+            vacancy_url TEXT,
+            hr_emails TEXT,
+            exec_emails TEXT,
+            manager_emails TEXT,
+            other_emails TEXT,
+            job_id TEXT
         )
     """)
 
-    try:
-        cursor.execute("ALTER TABLE leads ADD COLUMN contact_person TEXT")
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass
-
-    try:
-        cursor.execute("ALTER TABLE leads ADD COLUMN establishment_size TEXT")
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass
+    # Alter table to add new columns if they do not exist
+    new_cols = [
+        ("contact_person", "TEXT"),
+        ("establishment_size", "TEXT"),
+        ("linkedin_url", "TEXT"),
+        ("matched_snippet", "TEXT"),
+        ("vacancy_url", "TEXT"),
+        ("hr_emails", "TEXT"),
+        ("exec_emails", "TEXT"),
+        ("manager_emails", "TEXT"),
+        ("other_emails", "TEXT"),
+        ("job_id", "TEXT")
+    ]
+    for col_name, col_type in new_cols:
+        try:
+            cursor.execute(f"ALTER TABLE leads ADD COLUMN {col_name} {col_type}")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_phone ON leads(phone)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_name_city ON leads(name, city)")
@@ -310,6 +326,57 @@ def lead_exists(phone=None, name=None, city=None):
     return False
 
 
+def vacancy_exists(name, vacancy_url, job_id=None):
+    """
+    Checks if a job vacancy for a company already exists in the database.
+    Used for Staffing Mode.
+    If job_id is provided, we check if a lead with that same company name and job_id exists.
+    If job_id is not provided, we check by name and vacancy_url.
+    If a matching vacancy exists but was scraped more than 90 days ago, it is treated as expired (returns False).
+    """
+    if not name:
+        return False
+        
+    from datetime import datetime, timedelta
+    ninety_days_ago = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d %H:%M:%S")
+    
+    name_clean = name.strip().lower()
+    job_id_clean = job_id.strip() if job_id else ""
+    url_clean = vacancy_url.strip() if vacancy_url else ""
+    
+    for db_path in get_db_paths():
+        conn = get_db_connection(db_path)
+        cursor = conn.cursor()
+        
+        # 1. If job_id is provided, match by name and job_id
+        if job_id_clean:
+            cursor.execute(
+                "SELECT scraped_at FROM leads WHERE LOWER(name) = ? AND job_id = ?",
+                (name_clean, job_id_clean)
+            )
+        # 2. If job_id is not provided, match by name and vacancy_url
+        elif url_clean:
+            cursor.execute(
+                "SELECT scraped_at FROM leads WHERE LOWER(name) = ? AND vacancy_url = ?",
+                (name_clean, url_clean)
+            )
+        else:
+            conn.close()
+            continue
+            
+        row = cursor.fetchone()
+        if row:
+            scraped_at_str = row[0]
+            conn.close()
+            # If it was scraped less than 90 days ago, it is a duplicate (returns True)
+            if scraped_at_str and scraped_at_str > ninety_days_ago:
+                return True
+        else:
+            conn.close()
+            
+    return False
+
+
 def insert_lead(lead_data, log_callback=None):
     """
     Inserts a new lead into the active database slot.
@@ -330,8 +397,8 @@ def insert_lead(lead_data, log_callback=None):
 
     try:
         cursor.execute("""
-            INSERT INTO leads (name, category, phone, email, website, address, rating, review_count, city, scraped_at, sent_at, contact_person, establishment_size)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+            INSERT INTO leads (name, category, phone, email, website, address, rating, review_count, city, scraped_at, sent_at, contact_person, establishment_size, linkedin_url, matched_snippet, vacancy_url, hr_emails, exec_emails, manager_emails, other_emails, job_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             lead_data.get("name"),
             lead_data.get("category"),
@@ -344,7 +411,15 @@ def insert_lead(lead_data, log_callback=None):
             lead_data.get("city"),
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             lead_data.get("contact_person"),
-            lead_data.get("establishment_size")
+            lead_data.get("establishment_size"),
+            lead_data.get("linkedin_url"),
+            lead_data.get("matched_snippet"),
+            lead_data.get("vacancy_url"),
+            lead_data.get("hr_emails"),
+            lead_data.get("exec_emails"),
+            lead_data.get("manager_emails"),
+            lead_data.get("other_emails"),
+            lead_data.get("job_id")
         ))
         conn.commit()
         inserted_id = cursor.lastrowid

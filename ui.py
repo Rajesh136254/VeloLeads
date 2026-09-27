@@ -1,3 +1,4 @@
+import tkinter
 import customtkinter as ctk
 import threading
 import time
@@ -516,7 +517,8 @@ class App(ctk.CTk):
         tabs = [
             ("Lead Scraper", "🔍"),
             ("History", "⏳"),
-            ("Reports", "📄")
+            ("Reports", "📄"),
+            ("Settings", "⚙️")
         ]
 
         for idx, (tab_name, emoji) in enumerate(tabs):
@@ -757,33 +759,85 @@ class App(ctk.CTk):
 
         inputs_config = {"border_width": 1, "corner_radius": 8, "border_color": INPUT_BORDER, "fg_color": "#FFFFFF", "text_color": TEXT_COLOR, "font": self.font_input}
 
+        # --- Staffing / Recruiting Section ---
+        self.staffing_switch = ctk.CTkSwitch(
+            form_scroll, 
+            text="Staffing Mode 👔 (Scan career pages & check job vacancies)", 
+            font=self.font_label, 
+            progress_color=ACCENT_GREEN, 
+            text_color=TEXT_COLOR,
+            command=self.toggle_staffing_fields
+        )
+        self.staffing_switch.grid(row=2, column=0, sticky="w", pady=(5, 10))
+
+        # Staffing Sub-frame for Job Keywords (hidden/shown dynamically)
+        self.staffing_options_frame = ctk.CTkFrame(form_scroll, fg_color="transparent")
+        
+        lbl_career_kw = ctk.CTkLabel(self.staffing_options_frame, text="Job/Vacancy Keywords (comma-separated)", font=self.font_label, text_color=TEXT_COLOR)
+        lbl_career_kw.pack(anchor="w", pady=(0, 2))
+        
+        self.career_kw_entry = ctk.CTkEntry(self.staffing_options_frame, height=40, placeholder_text="e.g. engine manufacturer, welder, developer", **inputs_config)
+        self.career_kw_entry.pack(fill="x", pady=(0, 10))
+
+        lbl_exclude_kw = ctk.CTkLabel(self.staffing_options_frame, text="Exclusion Keywords (comma-separated)", font=self.font_label, text_color=TEXT_COLOR)
+        lbl_exclude_kw.pack(anchor="w", pady=(5, 2))
+        
+        self.exclude_kw_entry = ctk.CTkEntry(self.staffing_options_frame, height=40, placeholder_text="e.g. ngo, charity, government, trust", **inputs_config)
+        self.exclude_kw_entry.pack(fill="x", pady=(0, 10))
+
+        lbl_size = ctk.CTkLabel(self.staffing_options_frame, text="Company Size (Select multiple; unchecked for Any)", font=self.font_label, text_color=TEXT_COLOR)
+        lbl_size.pack(anchor="w", pady=(5, 2))
+
+        self.size_checkbox_frame = ctk.CTkFrame(self.staffing_options_frame, fg_color="transparent")
+        self.size_checkbox_frame.pack(fill="x", pady=(0, 10))
+        self.size_checkbox_frame.grid_columnconfigure((0, 1, 2), weight=1)
+        
+        sizes = ["0-10", "11-50", "51-100", "100-200", "200-500", "500-1000", "1001-5000", "5001-10000", "10000+"]
+        self.size_vars = {}
+        for idx, size_opt in enumerate(sizes):
+            row = idx // 3
+            col = idx % 3
+            var = ctk.IntVar()
+            cb = ctk.CTkCheckBox(
+                self.size_checkbox_frame, 
+                text=size_opt, 
+                variable=var, 
+                font=self.font_label, 
+                text_color=TEXT_COLOR,
+                fg_color=ACCENT_GREEN,
+                checkbox_height=20,
+                checkbox_width=20
+            )
+            cb.grid(row=row, column=col, sticky="w", padx=5, pady=4)
+            self.size_vars[size_opt] = var
+
         # Locations
         lbl_loc = ctk.CTkLabel(form_scroll, text="Locations", font=self.font_label, text_color=TEXT_COLOR)
-        lbl_loc.grid(row=2, column=0, sticky="w", pady=(10, 4))
+        lbl_loc.grid(row=4, column=0, sticky="w", pady=(10, 4))
         self.loc_entry = ctk.CTkEntry(form_scroll, height=40, placeholder_text="e.g. Hyderabad, Bangalore, Mumbai", **inputs_config)
-        self.loc_entry.grid(row=3, column=0, sticky="ew", pady=(0, 10))
+        self.loc_entry.grid(row=5, column=0, sticky="ew", pady=(0, 10))
 
-        # Niche / Keywords
-        lbl_kw = ctk.CTkLabel(form_scroll, text="Niche / Keywords", font=self.font_label, text_color=TEXT_COLOR)
-        lbl_kw.grid(row=4, column=0, sticky="w", pady=(10, 4))
-        self.kw_entry = ctk.CTkEntry(form_scroll, height=40, placeholder_text="e.g. Restaurants, Plumbers, Stock Market", **inputs_config)
-        self.kw_entry.grid(row=5, column=0, sticky="ew", pady=(0, 10))
+        # Industry or Category (previously Niche / Keywords)
+        lbl_kw = ctk.CTkLabel(form_scroll, text="Industry or Category", font=self.font_label, text_color=TEXT_COLOR)
+        lbl_kw.grid(row=6, column=0, sticky="w", pady=(10, 4))
+        self.kw_entry = ctk.CTkEntry(form_scroll, height=40, placeholder_text="e.g. Restaurants, Software Developers, Logistics, Hospitals", **inputs_config)
+        self.kw_entry.grid(row=7, column=0, sticky="ew", pady=(0, 10))
 
         # Extra Info / Prompt Description
         lbl_desc = ctk.CTkLabel(form_scroll, text="Extra Info / Prompt Description", font=self.font_label, text_color=TEXT_COLOR)
-        lbl_desc.grid(row=6, column=0, sticky="w", pady=(10, 4))
+        lbl_desc.grid(row=8, column=0, sticky="w", pady=(10, 4))
         self.desc_entry = ctk.CTkEntry(form_scroll, height=40, placeholder_text="e.g. Find suggestion providers or high reviews only", **inputs_config)
-        self.desc_entry.grid(row=7, column=0, sticky="ew", pady=(0, 10))
+        self.desc_entry.grid(row=9, column=0, sticky="ew", pady=(0, 10))
 
         # Target Emails
         lbl_email = ctk.CTkLabel(form_scroll, text="Target Emails (comma separated)", font=self.font_label, text_color=TEXT_COLOR)
-        lbl_email.grid(row=8, column=0, sticky="w", pady=(10, 4))
+        lbl_email.grid(row=10, column=0, sticky="w", pady=(10, 4))
         self.email_entry = ctk.CTkEntry(form_scroll, height=40, placeholder_text="Enter emails to send report", **inputs_config)
-        self.email_entry.grid(row=9, column=0, sticky="ew", pady=(0, 15))
+        self.email_entry.grid(row=11, column=0, sticky="ew", pady=(0, 15))
 
         # Bottom row layouts
         bottom_options_frame = ctk.CTkFrame(form_scroll, fg_color="transparent")
-        bottom_options_frame.grid(row=10, column=0, sticky="ew", pady=(0, 10))
+        bottom_options_frame.grid(row=12, column=0, sticky="ew", pady=(0, 10))
         bottom_options_frame.grid_columnconfigure((0, 1), weight=1)
 
         # Target Leads Count
@@ -804,11 +858,11 @@ class App(ctk.CTk):
 
         # Auto Run Times Header
         lbl_times_section = ctk.CTkLabel(form_scroll, text="Auto Run Times (Up to 4 times per day)", font=self.font_label, text_color=TEXT_COLOR)
-        lbl_times_section.grid(row=11, column=0, sticky="w", pady=(12, 4))
+        lbl_times_section.grid(row=13, column=0, sticky="w", pady=(12, 4))
 
         # Auto Run Times Inputs (4 side-by-side)
         times_container = ctk.CTkFrame(form_scroll, fg_color="transparent")
-        times_container.grid(row=12, column=0, sticky="ew", pady=(0, 15))
+        times_container.grid(row=14, column=0, sticky="ew", pady=(0, 15))
         times_container.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
         self.schedule_time_entries = []
@@ -839,7 +893,7 @@ class App(ctk.CTk):
             text_color="#FFFFFF",
             command=self.start_scraping
         )
-        self.start_btn.grid(row=13, column=0, sticky="ew", pady=(15, 5))
+        self.start_btn.grid(row=15, column=0, sticky="ew", pady=(15, 5))
         
         if self.is_scraping:
             self.start_btn.configure(state="disabled", text="SCRAPING...", fg_color="#A1A1AA")
@@ -858,7 +912,7 @@ class App(ctk.CTk):
             border_color=BORDER_COLOR,
             command=self.save_settings_with_notification
         )
-        self.save_btn.grid(row=14, column=0, sticky="ew", pady=(5, 20))
+        self.save_btn.grid(row=16, column=0, sticky="ew", pady=(5, 20))
 
         # Right Column: What's Happening & Total Leads Scraped
         right_panel = ctk.CTkFrame(self.current_view_frame, fg_color="transparent")
@@ -938,35 +992,33 @@ class App(ctk.CTk):
         # Canvas-drawn Sparkline (Mock trend)
         self.sparkline_canvas = ctk.CTkCanvas(self.card_scraped, width=130, height=45, bg=LIGHT_GREEN_BG, highlightthickness=0)
         self.sparkline_canvas.grid(row=0, column=0, columnspan=2, rowspan=3, sticky="ne", padx=20, pady=(15, 0))
-        self.draw_sparkline()
-
     def draw_sparkline(self):
         """Draws a smooth line chart representation on the canvas card."""
-        if not hasattr(self, "sparkline_canvas") or not self.sparkline_canvas:
+        if not hasattr(self, "sparkline_canvas") or not self.sparkline_canvas or not self.sparkline_canvas.winfo_exists():
             return
         
-        self.sparkline_canvas.delete("all")
-        
-        # Scale/render history points
-        pts = self.campaign_leads_history
-        if len(pts) < 2:
-            # Default static wavy preview
-            points = [10, 40, 30, 20, 55, 38, 80, 15, 105, 32, 130, 8, 145, 22]
-        else:
-            # Map values dynamically
-            max_val = max(pts) if max(pts) > 0 else 1
-            points = []
-            width = 130
-            height = 30
-            x_start = 10
-            y_start = 40
-            
-            for idx, val in enumerate(pts):
-                x = x_start + idx * (width / (len(pts) - 1))
-                y = y_start - (val / max_val) * height
-                points.extend([x, y])
-
         try:
+            self.sparkline_canvas.delete("all")
+            
+            # Scale/render history points
+            pts = self.campaign_leads_history
+            if len(pts) < 2:
+                # Default static wavy preview
+                points = [10, 40, 30, 20, 55, 38, 80, 15, 105, 32, 130, 8, 145, 22]
+            else:
+                # Map values dynamically
+                max_val = max(pts) if max(pts) > 0 else 1
+                points = []
+                width = 130
+                height = 30
+                x_start = 10
+                y_start = 40
+                
+                for idx, val in enumerate(pts):
+                    x = x_start + idx * (width / (len(pts) - 1))
+                    y = y_start - (val / max_val) * height
+                    points.extend([x, y])
+
             # Shaded transparent polygon underneath
             poly_points = [points[0], 45] + points + [points[-2], 45]
             self.sparkline_canvas.create_polygon(poly_points, fill="#D2EBE0", outline="")
@@ -978,10 +1030,13 @@ class App(ctk.CTk):
 
     def update_leads_labels(self, cnt, tot):
         """Helper to update leads counter labels from background threads."""
-        if hasattr(self, "lbl_last_val") and self.lbl_last_val:
-            self.lbl_last_val.configure(text=format_lead_count(cnt))
-        if hasattr(self, "lbl_total_val") and self.lbl_total_val:
-            self.lbl_total_val.configure(text=format_lead_count(tot))
+        try:
+            if hasattr(self, "lbl_last_val") and self.lbl_last_val and self.lbl_last_val.winfo_exists():
+                self.lbl_last_val.configure(text=format_lead_count(cnt))
+            if hasattr(self, "lbl_total_val") and self.lbl_total_val and self.lbl_total_val.winfo_exists():
+                self.lbl_total_val.configure(text=format_lead_count(tot))
+        except Exception:
+            pass
 
     def open_generated_report(self):
         """Open the latest campaign excel report file or exports folder."""
@@ -1004,6 +1059,13 @@ class App(ctk.CTk):
                 self.log(f"[!] Error opening reports folder: {e}")
         else:
             self.log("[!] Export folder not found. No report has been generated yet.")
+
+    def toggle_staffing_fields(self):
+        """Shows or hides the staffing keywords entry field based on switch state."""
+        if self.staffing_switch.get() == 1:
+            self.staffing_options_frame.grid(row=3, column=0, sticky="ew", pady=(0, 10))
+        else:
+            self.staffing_options_frame.grid_forget()
 
     def fill_form_inputs(self):
         """Loads entries from settings dictionary into Scraper inputs."""
@@ -1031,6 +1093,26 @@ class App(ctk.CTk):
         for idx, time_val in enumerate(schedule_times):
             if idx < len(self.schedule_time_entries) and str(time_val).strip() != "":
                 self.schedule_time_entries[idx].insert(0, str(time_val))
+
+        # Load staffing mode
+        if "staffing_mode" in settings and settings["staffing_mode"]:
+            self.staffing_switch.select()
+            self.toggle_staffing_fields()
+        if settings.get("career_keywords"):
+            self.career_kw_entry.insert(0, settings["career_keywords"])
+        if settings.get("exclude_keywords"):
+            self.exclude_kw_entry.insert(0, settings["exclude_keywords"])
+        
+        # Load selected company size checkboxes
+        company_sizes = settings.get("company_sizes") or []
+        if not company_sizes and settings.get("company_size") and settings.get("company_size") != "Any Size":
+            company_sizes = [settings["company_size"]]
+            
+        for size_opt, var in self.size_vars.items():
+            if size_opt in company_sizes:
+                var.set(1)
+            else:
+                var.set(0)
 
     # --- 3. HISTORY VIEW ---
     def setup_history_view(self):
@@ -1267,38 +1349,9 @@ class App(ctk.CTk):
 
         inputs_config = {"border_width": 1, "corner_radius": 8, "border_color": INPUT_BORDER, "fg_color": "#FFFFFF", "text_color": TEXT_COLOR, "font": self.font_input}
 
-        # 1. Server API URL configuration
-        lbl_api = ctk.CTkLabel(settings_scroll, text="Licensing Server API Endpoint URL", font=self.font_label, text_color=TEXT_COLOR)
-        lbl_api.pack(anchor="w", padx=25, pady=(20, 2))
-        
-        self.setting_api_entry = ctk.CTkEntry(settings_scroll, height=38, **inputs_config)
-        self.setting_api_entry.pack(fill="x", padx=25, pady=(0, 10))
-        self.setting_api_entry.insert(0, get_api_url())
-
-        # --- Scraper Filter Rules ---
-        lbl_rule_header = ctk.CTkLabel(settings_scroll, text="Scraper Filters Configuration", font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"), text_color=ACCENT_GREEN)
-        lbl_rule_header.pack(anchor="w", padx=25, pady=(15, 10))
-
-        # Min Rating Slider
-        rating_frame = ctk.CTkFrame(settings_scroll, fg_color="transparent")
-        rating_frame.pack(fill="x", padx=25, pady=5)
-        
-        self.lbl_rating = ctk.CTkLabel(rating_frame, text=f"Minimum Google Rating: {scraper.FILTERS.get('min_rating', 3.0)}★", font=self.font_label, text_color=TEXT_COLOR)
-        self.lbl_rating.pack(side="left")
-
-        self.setting_rating_slider = ctk.CTkSlider(
-            rating_frame,
-            from_=1.0, to=5.0,
-            number_of_steps=40,
-            progress_color=ACCENT_GREEN,
-            command=self.update_rating_slider_label
-        )
-        self.setting_rating_slider.pack(side="right", fill="x", expand=True, padx=(20, 0))
-        self.setting_rating_slider.set(float(scraper.FILTERS.get("min_rating", 3.0)))
-
         # Min Reviews Input
         reviews_frame = ctk.CTkFrame(settings_scroll, fg_color="transparent")
-        reviews_frame.pack(fill="x", padx=25, pady=10)
+        reviews_frame.pack(fill="x", padx=25, pady=(20, 10))
         
         lbl_reviews = ctk.CTkLabel(reviews_frame, text="Minimum Review Count Requirement", font=self.font_label, text_color=TEXT_COLOR)
         lbl_reviews.pack(side="left")
@@ -1307,23 +1360,17 @@ class App(ctk.CTk):
         self.setting_reviews_entry.pack(side="right", padx=(10, 0))
         self.setting_reviews_entry.insert(0, str(scraper.FILTERS.get("min_reviews", 5)))
 
+        # Require Email Switch
+        self.setting_email_switch = ctk.CTkSwitch(settings_scroll, text="Require Email Address (Discard leads with no email)", font=self.font_label, progress_color=ACCENT_GREEN, text_color=TEXT_COLOR)
+        self.setting_email_switch.pack(anchor="w", padx=25, pady=8)
+        if scraper.FILTERS.get("require_email", False):
+            self.setting_email_switch.select()
+
         # Require Phone Switch
         self.setting_phone_switch = ctk.CTkSwitch(settings_scroll, text="Require Phone Number (Discard leads with no phone)", font=self.font_label, progress_color=ACCENT_GREEN, text_color=TEXT_COLOR)
         self.setting_phone_switch.pack(anchor="w", padx=25, pady=8)
-        if scraper.FILTERS.get("require_phone", True):
+        if scraper.FILTERS.get("require_phone", False):
             self.setting_phone_switch.select()
-
-        # Strict Phone Validation Switch
-        self.setting_strict_phone = ctk.CTkSwitch(settings_scroll, text="Strict Phone Number Format Validation", font=self.font_label, progress_color=ACCENT_GREEN, text_color=TEXT_COLOR)
-        self.setting_strict_phone.pack(anchor="w", padx=25, pady=8)
-        if scraper.FILTERS.get("strict_phone_validation", True):
-            self.setting_strict_phone.select()
-
-        # Deep Research Mode Switch
-        self.setting_deep_research = ctk.CTkSwitch(settings_scroll, text="Deep Research Mode (Attempts to find emails/contacts from websites)", font=self.font_label, progress_color=ACCENT_GREEN, text_color=TEXT_COLOR)
-        self.setting_deep_research.pack(anchor="w", padx=25, pady=8)
-        if scraper.FILTERS.get("deep_research_mode", True):
-            self.setting_deep_research.select()
 
         # Save Button
         btn_save_config = ctk.CTkButton(
@@ -1337,26 +1384,25 @@ class App(ctk.CTk):
         )
         btn_save_config.pack(fill="x", padx=25, pady=(25, 20))
 
-    def update_rating_slider_label(self, val):
-        self.lbl_rating.configure(text=f"Minimum Google Rating: {round(val, 1)}★")
-
     def save_preferences_settings(self):
         """Save settings and apply them to scraper backend config."""
-        api_val = self.setting_api_entry.get().strip()
-        min_rating = round(float(self.setting_rating_slider.get()), 1)
+        api_val = get_api_url()
+        min_rating = scraper.FILTERS.get("min_rating", 3.0)
         
         try:
             min_reviews = int(self.setting_reviews_entry.get().strip())
         except ValueError:
             min_reviews = 5
 
+        require_email = bool(self.setting_email_switch.get() == 1)
         require_phone = bool(self.setting_phone_switch.get() == 1)
-        strict_phone = bool(self.setting_strict_phone.get() == 1)
-        deep_res = bool(self.setting_deep_research.get() == 1)
+        strict_phone = scraper.FILTERS.get("strict_phone_validation", True)
+        deep_res = scraper.FILTERS.get("deep_research_mode", True)
 
         # Apply to Scraper Backend at runtime
         scraper.FILTERS["min_rating"] = min_rating
         scraper.FILTERS["min_reviews"] = min_reviews
+        scraper.FILTERS["require_email"] = require_email
         scraper.FILTERS["require_phone"] = require_phone
         scraper.FILTERS["strict_phone_validation"] = strict_phone
         scraper.FILTERS["deep_research_mode"] = deep_res
@@ -1379,6 +1425,7 @@ class App(ctk.CTk):
         # Save scraper preferences in settings dictionary
         self.loaded_settings_dict["min_rating"] = min_rating
         self.loaded_settings_dict["min_reviews"] = min_reviews
+        self.loaded_settings_dict["require_email"] = require_email
         self.loaded_settings_dict["require_phone"] = require_phone
         self.loaded_settings_dict["strict_phone_validation"] = strict_phone
         self.loaded_settings_dict["deep_research_mode"] = deep_res
@@ -1398,18 +1445,21 @@ class App(ctk.CTk):
         """Thread-safe logging to the status panel and history db."""
         self.current_log_lines.append(message)
         
-        # Update text box on Lead Scraper screen
-        if hasattr(self, "log_box") and self.log_box:
-            self.log_box.configure(state="normal")
-            self.log_box.insert("end", message + "\n")
-            
-            # Keep only the last 300 lines in memory text box to avoid slow render
-            tb_lines = self.log_box.get("1.0", "end").split("\n")
-            if len(tb_lines) > 300:
-                self.log_box.delete("1.0", f"{len(tb_lines) - 300}.0")
+        # Update text box on Lead Scraper screen if it exists and is currently rendered
+        if hasattr(self, "log_box") and self.log_box and self.log_box.winfo_exists():
+            try:
+                self.log_box.configure(state="normal")
+                self.log_box.insert("end", message + "\n")
+                
+                # Keep only the last 300 lines in memory text box to avoid slow render
+                tb_lines = self.log_box.get("1.0", "end").split("\n")
+                if len(tb_lines) > 300:
+                    self.log_box.delete("1.0", f"{len(tb_lines) - 300}.0")
 
-            self.log_box.see("end")
-            self.log_box.configure(state="disabled")
+                self.log_box.see("end")
+                self.log_box.configure(state="disabled")
+            except Exception:
+                pass
 
         # Periodically flush log_data to SQLite History database
         if self.current_campaign_id is not None:
@@ -1455,6 +1505,12 @@ class App(ctk.CTk):
         # Save settings when scraping starts
         self.save_settings()
 
+        # Update scraper filters with current form inputs
+        scraper.FILTERS["staffing_mode"] = bool(self.staffing_switch.get() == 1)
+        scraper.FILTERS["career_keywords"] = self.career_kw_entry.get().strip()
+        scraper.FILTERS["exclude_keywords"] = self.exclude_kw_entry.get().strip()
+        scraper.FILTERS["company_sizes"] = [size for size, var in self.size_vars.items() if var.get() == 1]
+
         self.is_scraping = True
         self.session_leads_count = 0
         self.campaign_leads_history = [0]
@@ -1469,11 +1525,17 @@ class App(ctk.CTk):
             self.current_campaign_id = None
 
         self.start_btn.configure(state="disabled", text="SCRAPING...", fg_color="#A1A1AA")
-        if hasattr(self, "progress_bar"):
-            self.progress_bar.set(0)
+        if hasattr(self, "progress_bar") and self.progress_bar and self.progress_bar.winfo_exists():
+            try:
+                self.progress_bar.set(0)
+            except Exception:
+                pass
         
-        if hasattr(self, "lbl_last_val"):
-            self.lbl_last_val.configure(text="0")
+        if hasattr(self, "lbl_last_val") and self.lbl_last_val and self.lbl_last_val.winfo_exists():
+            try:
+                self.lbl_last_val.configure(text="0")
+            except Exception:
+                pass
         if hasattr(self, "lbl_total_val"):
             try:
                 tot = db.get_total_leads_count()
@@ -1498,9 +1560,21 @@ class App(ctk.CTk):
             self.log("="*50)
             self.log(f"[*] Starting VeloLeads Campaign")
             self.log(f"[*] Locations: {', '.join(locations)}")
-            self.log(f"[*] Keywords: {', '.join(keywords)}")
+            self.log(f"[*] Industry / Category: {', '.join(keywords)}")
             self.log(f"[*] Description filter: {description}")
             self.log(f"[*] Target per query: {target}")
+            
+            # Staffing mode parameters logging
+            is_staffing = bool(self.staffing_switch.get() == 1)
+            if is_staffing:
+                self.log(f"[*] Sourcing Mode: Staffing & Recruiting Mode 👔")
+                self.log(f"[*] Job/Vacancy Keywords: {self.career_kw_entry.get().strip()}")
+                self.log(f"[*] Exclusion Keywords: {self.exclude_kw_entry.get().strip()}")
+                sizes_selected = [size for size, var in self.size_vars.items() if var.get() == 1]
+                sizes_str = ", ".join(sizes_selected) if sizes_selected else "Any Size"
+                self.log(f"[*] Target Company Size(s): {sizes_str}")
+            else:
+                self.log(f"[*] Sourcing Mode: Normal Google Maps Mode 🗺️")
             self.log("="*50)
 
             install_browsers(self.log)
@@ -1516,8 +1590,11 @@ class App(ctk.CTk):
 
                     self.log(f"\n[>>>] Query {current_query}/{total_queries}: {query_str}")
                     
-                    if hasattr(self, "progress_bar"):
-                        self.after(0, lambda progress=current_query / total_queries: self.progress_bar.set(progress))
+                    if hasattr(self, "progress_bar") and self.progress_bar and self.progress_bar.winfo_exists():
+                        try:
+                            self.after(0, lambda progress=current_query / total_queries: self.progress_bar.set(progress) if self.progress_bar.winfo_exists() else None)
+                        except Exception:
+                            pass
 
                     leads = scrape_leads_for_query(query_str, loc, target, max_scrolls=5, ui_log_callback=self.log, prompt_description=description)
                     if leads:
@@ -1584,10 +1661,16 @@ class App(ctk.CTk):
 
     def reset_scraping_state(self):
         self.is_scraping = False
-        if hasattr(self, "start_btn") and self.start_btn:
-            self.start_btn.configure(state="normal", text="Start Scraping  →", fg_color=ACCENT_GREEN)
-        if hasattr(self, "progress_bar") and self.progress_bar:
-            self.progress_bar.set(1.0)
+        if hasattr(self, "start_btn") and self.start_btn and self.start_btn.winfo_exists():
+            try:
+                self.start_btn.configure(state="normal", text="Start Scraping  →", fg_color=ACCENT_GREEN)
+            except Exception:
+                pass
+        if hasattr(self, "progress_bar") and self.progress_bar and self.progress_bar.winfo_exists():
+            try:
+                self.progress_bar.set(1.0)
+            except Exception:
+                pass
         
         # If campaign history is loaded, refresh list in background
         if hasattr(self, "scroll_campaigns"):
@@ -1609,9 +1692,14 @@ class App(ctk.CTk):
         filters = self.loaded_settings_dict
         scraper.FILTERS["min_rating"] = filters.get("min_rating", 3.0)
         scraper.FILTERS["min_reviews"] = filters.get("min_reviews", 5)
-        scraper.FILTERS["require_phone"] = filters.get("require_phone", True)
+        scraper.FILTERS["require_email"] = filters.get("require_email", False)
+        scraper.FILTERS["require_phone"] = filters.get("require_phone", False)
         scraper.FILTERS["strict_phone_validation"] = filters.get("strict_phone_validation", True)
         scraper.FILTERS["deep_research_mode"] = filters.get("deep_research_mode", True)
+        scraper.FILTERS["staffing_mode"] = filters.get("staffing_mode", False)
+        scraper.FILTERS["career_keywords"] = filters.get("career_keywords", "")
+        scraper.FILTERS["exclude_keywords"] = filters.get("exclude_keywords", "")
+        scraper.FILTERS["company_sizes"] = filters.get("company_sizes") or []
 
     def save_settings_with_notification(self):
         self.save_settings()
@@ -1625,6 +1713,11 @@ class App(ctk.CTk):
         schedule_enabled = bool(self.schedule_switch.get() == 1)
         schedule_times = [entry.get().strip() for entry in self.schedule_time_entries if entry.get().strip()]
 
+        staffing_mode = bool(self.staffing_switch.get() == 1)
+        career_keywords = self.career_kw_entry.get().strip()
+        exclude_keywords = self.exclude_kw_entry.get().strip()
+        company_sizes = [size for size, var in self.size_vars.items() if var.get() == 1]
+
         # Maintain other keys while modifying form properties
         self.loaded_settings_dict.update({
             "locations": self.loc_entry.get().strip(),
@@ -1634,7 +1727,11 @@ class App(ctk.CTk):
             "target": self.leads_entry.get().strip(),
             "schedule_enabled": schedule_enabled,
             "schedule_times": schedule_times,
-            "schedule_time": schedule_times[0] if schedule_times else ""
+            "schedule_time": schedule_times[0] if schedule_times else "",
+            "staffing_mode": staffing_mode,
+            "career_keywords": career_keywords,
+            "exclude_keywords": exclude_keywords,
+            "company_sizes": company_sizes
         })
 
         try:
